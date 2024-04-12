@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  api-run:
+    container_name: api-run
+    build:
+      context: ./ 
+    image: sec-microservice-rh-api-run
+    ports:
+    - 9080:80
+    # command: tail -f /dev/null 
+    environment:
+      DB_NAME: ${DB_NAME:-testdb}
+      DB_USER: ${DB_USER:-user}
+      DB_HOST: ${DB_HOST:-postgres-test}
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      API_ENV: ${API_ENV:-test}
+    depends_on:
+    - postgres-test
+  api-test:
+    container_name: api-test
+    build:
+      context: ./ 
+    ports:
+    - 9080:80
+    command: 'poetry run pytest tests -x -vv --cov=. --cov-report=xml:./.qodana/code-coverage/cov.xml'
+    # command: tail -f /dev/null 
+    volumes:
+    - ./.qodana/code-coverage/:/backend/.qodana/code-coverage/
+    - ./backend/tests/:/app/tests
+    environment:
+      DB_NAME: ${DB_NAME:-testdb}
+      DB_USER: ${DB_USER:-user}
+      DB_HOST: ${DB_HOST:-postgres-test}
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      API_ENV: ${API_ENV:-test}
+    depends_on:
+    - postgres-test
+  postgres-test:
+    container_name: postgres-test
+    image: postgres:16-alpine
+    # volumes:
+    # - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${DB_NAME:-testdb}
+      POSTGRES_USER: ${DB_USER:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+    ports:
+    - 5432:5432
+# volumes:
+  # pgdata:
