@@ -3,7 +3,7 @@ name: Tests
 on:
   pull_request:
     types: [opened, synchronize]
-  merge:
+  push:
     branches:
     - main
     - 'release/*'
