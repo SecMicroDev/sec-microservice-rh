@@ -39,6 +39,7 @@ jobs:
 
     - name: codacy-coverage-reporter
       uses: codacy/codacy-coverage-reporter-action@v1
+      if: github.event.pull_request.merged == false
       with:
         project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
         # or
@@ -48,6 +49,7 @@ jobs:
         # coverage-reports: <PATH_TO_REPORT>, <PATH_TO_REPORT>
     - name: Run Codacy Analysis CLI
       uses: codacy/codacy-analysis-cli-action@master
+      if: github.event.pull_request.merged == false
       with:
         output: results.sarif
         format: sarif
