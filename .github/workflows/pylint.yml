@@ -2,24 +2,34 @@ name: Pylint
 
 on:
   pull_request:
-    types: [opened, review_requested]
+    types: [opened, synchronize]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.11"]
     steps:
     - uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}  # to check out the actual pull request commit, not the merge commit
+        fetch-depth: 0  # a full history is required for pull request analysis
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
+
+    - run: 
+
     - name: Install dependencies
+      working-directory: ./backend
       run: |
+        echo "PYTHONPATH="'"'"$(pwd):$PYTHONPATH"'"'"" >> "$GITHUB_ENV"
         python -m pip install --upgrade pip
-        pip install pylint
+        pip install "poetry==1.8"
+        poetry install 
     - name: Analysing the code with pylint
+      working-directory: ./backend
       run: |
-        pylint $(git ls-files '*.py')
+        poetry run pylint .
