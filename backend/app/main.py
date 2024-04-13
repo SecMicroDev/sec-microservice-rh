@@ -12,6 +12,7 @@ Imports:
     create_db: Function to initialize the database.
     router: FastAPI router containing all application routes.
 """
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 

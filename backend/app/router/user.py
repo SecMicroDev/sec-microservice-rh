@@ -10,6 +10,7 @@ from app.models.user import User
 
 router = APIRouter(prefix="/users")
 
+
 @router.post("/")
 async def create_user(user: User):
     """
@@ -35,6 +36,6 @@ async def create_user(user: User):
         session.close()
 
         return {"message": "User created successfully", "user_id": user_id}
-    
-    except:
-        raise HTTPException(status_code=500, detail='Unknown error')
+
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Unknown error") from exc

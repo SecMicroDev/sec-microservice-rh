@@ -1,3 +1,6 @@
+""" Tests for the User route with client """
+
+
 from fastapi import status
 from fastapi.testclient import TestClient
 from app.main import app
@@ -7,7 +10,12 @@ from app.models.user import User
 client = TestClient(app)
 
 
+
+
 def test_create_user():
+
+    """ User should be created """
+
     # Creating a new user
     response = client.post(
         "/users/",
@@ -15,7 +23,7 @@ def test_create_user():
             "username": "testuser",
             "email": "test@email.com",
             "full_name": "Test User",
-            "hashed_password": "hashedpassword123",  # In a real-world scenario, this should be hashed
+            "hashed_password": "hashedpassword123", 
         },
     )
     assert response.status_code == status.HTTP_200_OK

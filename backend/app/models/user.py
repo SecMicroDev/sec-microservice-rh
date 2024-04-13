@@ -1,3 +1,6 @@
+"""  User model package """
+
+
 from typing import Optional
 from datetime import datetime as dt
 from sqlmodel import Field, SQLModel, Column, String
@@ -16,14 +19,12 @@ class User(SQLModel, table=True):
         description="Email address of the user.",
     )
     full_name: Optional[str] = Field(
-        description="Full name of the user.",
-        nullable=True
+        description="Full name of the user.", nullable=True
     )
     hashed_password: str = Field(
         description="Hashed password for the user.",
     )
     created_at: dt = Field(
         description="Timestamp of when the user was registered.",
-        default_factory=lambda: dt.now(),
-
+        default_factory=dt.now,
     )
