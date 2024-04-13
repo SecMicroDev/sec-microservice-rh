@@ -41,14 +41,14 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: py-coverage-data
-        path: ./.qodana/code-coverage
+        path: ./PYTHON/py/.qodana/code-coverage
 
     - name: Use Qodana
       uses: JetBrains/qodana-action@v2023.3
       env:
         QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }} # read the steps about it below
       with:
-        args: "-i,backend,--linter,jetbrains/qodana-python-community:2023.3"
+        args: "-i,PYTHON/py,--linter,jetbrains/qodana-python:2023.3"
         pr-mode: false
         
   push_to_registry:
