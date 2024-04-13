@@ -23,10 +23,10 @@ services:
       context: ./ 
     ports:
     - 9080:80
-    command: 'poetry run pytest tests -x -vv --cov=. --cov-report=xml:./.qodana/code-coverage/coverage.xml'
+    command: 'poetry run pytest tests -x -vv --cov=. --cov-report=xml:./code-coverage/coverage.xml'
     # command: tail -f /dev/null 
     volumes:
-    - ./PYTHON/py/.qodana/:/backend/.qodana/
+    - .coverage/:/backend/code-coverage/
     - ./backend/tests/:/backend/tests
     environment:
       DB_NAME: ${DB_NAME:-testdb}
