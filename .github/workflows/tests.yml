@@ -60,14 +60,14 @@ jobs:
 
     - name: Log in to Docker Hub
       uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
-      if: ${{ github.event_name == 'push' }}
+      # if: ${{ github.event_name == 'push' }}
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Extract metadata (tags, labels) for Docker
       id: meta
-      if: ${{ github.event_name == 'push' }}
+      # if: ${{ github.event_name == 'push' }}
       uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
       with:
         images: ${{ secrets.DOCKER_USERNAME }}/sec-microservice-rh
