@@ -22,11 +22,11 @@ jobs:
     - name: Install dependencies
       working-directory: ./backend
       run: |
-        echo "PYTHONPATH="'"'"/backend:$PYTHONPATH"'"'"" >> "$GITHUB_ENV"
+        echo "PYTHONPATH="'"'"$(pwd)/backend:$PYTHONPATH"'"'"" >> "$GITHUB_ENV"
         python -m pip install --upgrade pip
         pip install "poetry==1.8"
         poetry install 
     - name: Analysing the code with pylint
       working-directory: ./backend
       run: |
-        poetry run pylint ./app/*.py
+        poetry run pylint .

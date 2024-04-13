@@ -37,6 +37,14 @@ jobs:
     - name: Ending container
       run: docker compose down
 
+    - name: Copying source code files
+      run: |
+        sudo mkdir -p PYTHON/py
+        sudo cp -r backend/ PYTHON/py/
+
+    - run: |
+        echo "PYTHON/py folder"
+        ls ./PYTHON/py
     - name: Archive coverage data
       uses: actions/upload-artifact@v2
       with:
