@@ -56,7 +56,7 @@ jobs:
       env:
         QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }} # read the steps about it below
       with:
-        args: "-i,PYTHON/py,--linter,jetbrains/qodana-python-community:2023.3"
+        args: "-i,PYTHON/py,--linter,jetbrains/qodana-python-community:2023.3,-u,root"
         pr-mode: false
         
   push_to_registry:
