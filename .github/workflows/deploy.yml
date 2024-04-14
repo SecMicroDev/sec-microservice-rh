@@ -65,7 +65,7 @@ jobs:
         provenance: ${{ github.event_name != 'pull_request' }}
         push: ${{ github.event_name != 'pull_request' }}
         load: ${{ github.event_name == 'pull_request' }}
-        tags: ${{ steps.meta.outputs.tags }}
+        tags: ${{ steps.meta.outputs.tags }}${{ github.event_name != 'pull_request' && ',${{ env.IMAGE_NAME:latest }}' || '' }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
@@ -73,11 +73,12 @@ jobs:
     - name: Docker Scout
       id: docker-scout
       if: ${{ github.event_name == 'pull_request' }}
-      uses: docker/scout-action@dd36f5b0295baffa006aa6623371f226cc03e506
+      uses: docker/scout-action@@v1
       with:
         command: cves,recommendations
         image: ${{ steps.meta.outputs.tags }}
         # image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         only-severities: critical,high
+        github-token: ${{ secrets.SCOUT_TOKEN }}
         exit-code: false
 
