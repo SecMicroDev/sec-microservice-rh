@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-rh-dev
+  namespace: tcc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-container-rh-dev
+  template:
+    metadata:
+      labels:
+        app: postgres-container-rh-dev
+        tier: backend
+    spec:
+      containers:
+        - name: postgres-container-rh-dev
+          image: postgres:16-alpine
+          envFrom:
+            - secretRef:
+                name: postgres-secret
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: postgres-volume-mount-rh
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-volume-mount-rh
+          persistentVolumeClaim:
+            claimName: postgres-pvc-rh-dev
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: postgres-service-rh-dev
+  namespace: tcc
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres-container-rh-dev
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432

@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rhServiceDev
+  namespace: tcc
+spec:
+  selector:
+    matchLabels:
+      app: rhServiceDev
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: rhServiceDev
+    spec:
+      containers:
+      - name: sec-microservice-rh
+        image: swamptg/sec-microservice-rh:latest
+        imagePullPolicy: Always
+        command: ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
+        env:
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: tcc-micro-secret
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: tcc-micro-secret
+              key: DB_USER
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: tcc-micro-secret
+              key: DB_HOST
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: tcc-micro-secret
+              key: DB_PASSWORD
+        - name: API_ENV 
+          value: dev
+        ports:
+        - name: http-rh
+          containerPort: 80
+        resources:
+          requests:
+            cpu: '150m'
+            memory: '50Mi'
+          limits:
+            cpu: '300m'
+            memory: '200Mi'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: tcc
+  name: rhServiceDev
+  labels:
+    app: rhServiceDev
+spec:
+  type: ClusterIP
+  selector:
+    app: rhServiceDev
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8050
