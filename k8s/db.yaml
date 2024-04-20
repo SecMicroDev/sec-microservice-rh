@@ -19,24 +19,43 @@ spec:
           image: postgres:16-alpine
           envFrom:
             - secretRef:
-                name: postgres-secret
+                name: pg-micro-secret
           ports:
             - containerPort: 5432
           volumeMounts:
             - name: postgres-volume-mount-rh
               mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command:
+                - bash
+                - "-c"
+                - |
+                  pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+            initialDelaySeconds: 15
+            timeoutSeconds: 20
+          livenessProbe:
+            exec:
+              command:
+                - bash
+                - "-c"
+                - |
+                  pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+            initialDelaySeconds: 45
+            timeoutSeconds: 20
+
       volumes:
         - name: postgres-volume-mount-rh
           persistentVolumeClaim:
             claimName: postgres-pvc-rh-dev
 ---
-
 kind: Service
 apiVersion: v1
 metadata:
   name: postgres-service-rh-dev
   namespace: tcc
 spec:
+  clusterIP: 10.96.254.20
   type: ClusterIP
   selector:
     app: postgres-container-rh-dev

@@ -7,10 +7,9 @@ metadata:
     type: local
     app: tcc-apps
 spec:
-  storageClassName: local-storage
+  storageClassName: standard
   accessModes:
-  - ReadWriteMany
+  - ReadWriteOnce
   resources:
     requests:
       storage: 2Gi
-  volumeName: postgres-pv
