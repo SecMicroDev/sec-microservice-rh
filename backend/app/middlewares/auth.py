@@ -44,7 +44,12 @@ def authenticate_user(token: Annotated[str, Depends(oauth2_scheme)]) -> UserRead
         raise credentials_exception from ex
 
 
-def authorize_user(user: UserRead = Depends(authenticate_user), operation_scopes: list[str] = ["All"], operation_hierarchy_order: int = 1) -> UserRead:
+def authorize_user(
+    user: UserRead = Depends(authenticate_user),
+    operation_scopes: list[str] = ["All"],
+    operation_hierarchy_order: int = 1,
+    custom_checks: bool | None = None,
+) -> UserRead:
     """
     Authorizes the user to access a resource based on their role hierarchy and scope.
 
@@ -58,18 +63,31 @@ def authorize_user(user: UserRead = Depends(authenticate_user), operation_scopes
 
     """
 
-    print('Hierarchies: ', user.role.hierarchy)
-    print('Scopes: ', user.scope.name)
-    print('Check hier', user.role.hierarchy > operation_hierarchy_order)
-    print('Check scope', user.scope.name != DefaultScope.ALL and user.scope.name not in operation_scopes)
+    print("Hierarchies: ", user.role.hierarchy)
+    print("Scopes: ", user.scope.name)
+    print("Check hier", user.role.hierarchy > operation_hierarchy_order)
+    print(
+        "Check scope",
+        user.scope.name != DefaultScope.ALL and user.scope.name not in operation_scopes,
+    )
 
-    if (user.role.hierarchy != 1 and user.role.hierarchy >= operation_hierarchy_order) \
-        or (user.scope.name != DefaultScope.ALL.value and user.scope.name not in operation_scopes):
+    if (
+        user.role.hierarchy != 1 and user.role.hierarchy >= operation_hierarchy_order
+    ) or (
+        user.scope.name != DefaultScope.ALL.value
+        and user.scope.name not in operation_scopes
+    ):
 
         print("Raising exception...")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User does not have permission to access this resource",
         )
-    
+
+    if custom_checks!= None and not custom_checks:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not have permission to access this resource",
+        )
+
     return user

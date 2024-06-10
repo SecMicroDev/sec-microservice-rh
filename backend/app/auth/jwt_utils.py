@@ -23,7 +23,7 @@ class JWTValidationError(Exception):
 
 def create_jwt_token(
     payload: dict,
-    expires: int = ACCESS_TOKEN_EXPIRE_MINUTES,
+    expires: int = ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     config: dict[str, str] = {"JWT_KEY": JWT_SECRET_KEY, "JWT_ALGO": ALGORITHM},
 ) -> str:
     """
@@ -64,6 +64,9 @@ def decode_jwt_token(
         algorithms=config["JWT_ALGO"],
         issuer=DEFAULT_OPTIONS["iss"],
     )
+
+    print( 'Claims: ', str(decoded_claims))
+    print('Sub: ', str(decoded_claims["sub"]))
 
     decoded_claims.update(dict(sub=json.loads(decoded_claims["sub"])))
 
