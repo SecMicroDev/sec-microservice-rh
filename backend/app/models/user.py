@@ -1,21 +1,21 @@
 """  User model package """
 
-from typing import TYPE_CHECKING, Optional
-from datetime import datetime as dt
+from typing import Optional, Tuple
+from datetime import datetime as dt, timezone
 from pydantic import EmailStr
-from sqlalchemy import String
-from sqlmodel import Field, Relationship, SQLModel, Column
+from sqlalchemy import String, UniqueConstraint
+from sqlmodel import Field, Relationship, SQLModel, Column, col, select, and_
+from sqlmodel.sql.expression import Select, SelectOfScalar
 
-from app.models.enterprise import Enterprise
+from app.models.enterprise import Enterprise, EnterpriseRelation
 from app.db.base import BaseIDModel
 
 from app.models.role import Role
 from app.models.scope import Scope
 from app.models.api_response import APIResponse
 
-if TYPE_CHECKING:
-    from app.models.role import RoleRelation
-    from app.models.scope import ScopeRelation
+from app.models.role import RoleRelation
+from app.models.scope import ScopeRelation
 
 
 class BaseUser(SQLModel):
@@ -23,7 +23,7 @@ class BaseUser(SQLModel):
 
     username: str = Field(
         description="Username for the user.",
-        sa_column=Column(String, index=True, unique=True),
+        sa_column=Column(String, index=True),
     )
     email: EmailStr = Field(
         sa_column=Column(String, unique=True, index=True),
@@ -32,6 +32,55 @@ class BaseUser(SQLModel):
     full_name: Optional[str] = Field(
         default=None, description="Full name of the user.", nullable=True
     )
+
+    def query_scopes_roles(self, roles_ids: list[int]=[], scopes_ids: list[int]=[]) -> Select[Tuple[Enterprise, Scope, Role]]:
+        query = (
+            select(Enterprise, Scope, Role)
+                .where(Enterprise.id == self.enterprise_id))
+
+        if roles_ids and len(roles_ids) > 0:
+            query = query.where(col(Role.id).in_(roles_ids))
+
+        if scopes_ids and len(scopes_ids) > 0:
+            query = query.where(col(Scope.id).in_(scopes_ids))
+
+        if roles_ids and len(roles_ids) > 0:
+            query.join(Role, and_(Role.enterprise_id == Enterprise.id))
+
+        if scopes_ids and len(scopes_ids) > 0:
+            query.join(Scope, and_(Scope.enterprise_id == Enterprise.id))
+
+        return query
+
+
+    def query_scope_role_by_id(
+        self, role_id: int, scope_id: int
+        ) -> Select[Tuple[Enterprise, Scope, Role]]:
+        return (
+            select(Enterprise, Scope, Role)
+            .where(
+                (Enterprise.id == self.enterprise_id)
+                & (Scope.id == scope_id)
+                & (Role.id == role_id)
+            )
+            .join(Scope)
+            .join(Role)
+        )
+
+
+    def query_scope_role_by_name(
+        self, role_name: str, scope_name: str
+    ) -> Select[tuple]:
+        return (
+            select(Enterprise, Scope, Role)
+            .where(
+                (Enterprise.id == self.enterprise_id)
+                & (Scope.name == scope_name)
+                & (Role.name == role_name)
+            )
+            .join(Scope)
+            .join(Role)
+        )
 
 
 class User(BaseIDModel, BaseUser, table=True):
@@ -48,30 +97,36 @@ class User(BaseIDModel, BaseUser, table=True):
         scope (Scope, optional): Scope object associated with the user.
         enterprise (Enterprise, optional): Enterprise object associated with the user.
     """
-    
+
     __tablename__ = "user"
+    __table_args__ = (UniqueConstraint("username", "enterprise_id"),)
     hashed_password: str = Field(
         description="Hashed password for the user.",
     )
     created_at: dt = Field(
         description="Timestamp of when the user was registered.",
-        default_factory=dt.now,
+        default_factory=lambda: dt.now(timezone.utc),
     )
     role_id: Optional[int] = Field(default=None, foreign_key="role.id")
     scope_id: Optional[int] = Field(
         default=None, foreign_key="scope.id", nullable=False
     )
-    enterprise_id: Optional[int] = Field(foreign_key="enterprise.id", nullable=False)
     role: Optional[Role] = Relationship(back_populates="users")
     scope: Optional[Scope] = Relationship(back_populates="users")
     enterprise: Optional[Enterprise] = Relationship(back_populates="users")
+    enterprise_id: int | None = Field(foreign_key="enterprise.id", nullable=False)
+
+    def get_all(self) -> SelectOfScalar:
+        return select(User).where(User.enterprise_id == self.enterprise_id)
+
+
 
 
 class UserCreate(BaseUser):
     """Represents a user creation request."""
 
     password: str
-    enterprise_id: int 
+    enterprise_id: int
     role_id: Optional[int] = None
     scope_id: Optional[int] = None
     role_name: Optional[str] = None
@@ -81,24 +136,35 @@ class UserCreate(BaseUser):
 class UserRead(BaseUser):
     """Represents a user read response."""
 
+    id: int
     created_at: dt
+    enterprise_id: int | None = None
     edited_at: Optional[dt] = None
     role: "RoleRelation"
     scope: "ScopeRelation"
-    enterprise: Enterprise
+    enterprise: "EnterpriseRelation"
 
 
-class UserUpdate(UserCreate):
+class UserUpdate(SQLModel):
     """Represents a user update request."""
 
     username: Optional[str] = None
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
-    hashed_password: Optional[str] = None
+    password: Optional[str] = None
     role_id: Optional[int] = None
     role_name: Optional[str] = None
     scope_name: Optional[str] = None
     scope_id: Optional[int] = None
+
+
+class UserUpdateMe(SQLModel):
+    """Represents a user update request for the current user."""
+
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
+    password: Optional[str] = None
 
 
 class UserListResponse(APIResponse):
@@ -111,3 +177,9 @@ class UserResponse(APIResponse):
     """Represents a user response."""
 
     data: UserRead
+
+class FirstUserCreate(BaseUser):
+    """Represents a user creation request."""
+
+    password: str
+    enterprise_id: int | None = None 
