@@ -2,7 +2,6 @@
 
 from sqlmodel import Session, create_engine, SQLModel
 import sqlalchemy as sa
-from sqlalchemy.orm import sessionmaker
 
 
 from . import settings as st
@@ -31,11 +30,12 @@ def get_db():
         Session: a new database session
     """
 
-    session = SessionLocal()
+    session = Session(autocommit=False, autoflush=False, bind=engine)
     try:
         yield session
     finally:
-        session.close()
+        if session.is_active:
+            session.close()
 
 
 SQLALCHEMY_DATABASE_URL = (
@@ -45,5 +45,3 @@ SQLALCHEMY_DATABASE_URL = (
 GUID_SERVER_DEFAULT_PSQL = sa.DefaultClause(sa.text("gen_random_uuid()"))
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
