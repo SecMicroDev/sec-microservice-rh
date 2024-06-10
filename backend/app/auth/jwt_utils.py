@@ -65,8 +65,8 @@ def decode_jwt_token(
         issuer=DEFAULT_OPTIONS["iss"],
     )
 
-    print( 'Claims: ', str(decoded_claims))
-    print('Sub: ', str(decoded_claims["sub"]))
+    print("Claims: ", str(decoded_claims))
+    print("Sub: ", str(decoded_claims["sub"]))
 
     decoded_claims.update(dict(sub=json.loads(decoded_claims["sub"])))
 

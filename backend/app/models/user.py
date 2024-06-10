@@ -33,10 +33,12 @@ class BaseUser(SQLModel):
         default=None, description="Full name of the user.", nullable=True
     )
 
-    def query_scopes_roles(self, roles_ids: list[int]=[], scopes_ids: list[int]=[]) -> Select[Tuple[Enterprise, Scope, Role]]:
-        query = (
-            select(Enterprise, Scope, Role)
-                .where(Enterprise.id == self.enterprise_id))
+    def query_scopes_roles(
+        self, roles_ids: list[int] = [], scopes_ids: list[int] = []
+    ) -> Select[Tuple[Enterprise, Scope, Role]]:
+        query = select(Enterprise, Scope, Role).where(
+            Enterprise.id == self.enterprise_id
+        )
 
         if roles_ids and len(roles_ids) > 0:
             query = query.where(col(Role.id).in_(roles_ids))
@@ -52,10 +54,9 @@ class BaseUser(SQLModel):
 
         return query
 
-
     def query_scope_role_by_id(
         self, role_id: int, scope_id: int
-        ) -> Select[Tuple[Enterprise, Scope, Role]]:
+    ) -> Select[Tuple[Enterprise, Scope, Role]]:
         return (
             select(Enterprise, Scope, Role)
             .where(
@@ -66,7 +67,6 @@ class BaseUser(SQLModel):
             .join(Scope)
             .join(Role)
         )
-
 
     def query_scope_role_by_name(
         self, role_name: str, scope_name: str
@@ -118,8 +118,6 @@ class User(BaseIDModel, BaseUser, table=True):
 
     def get_all(self) -> SelectOfScalar:
         return select(User).where(User.enterprise_id == self.enterprise_id)
-
-
 
 
 class UserCreate(BaseUser):
@@ -178,8 +176,9 @@ class UserResponse(APIResponse):
 
     data: UserRead
 
+
 class FirstUserCreate(BaseUser):
     """Represents a user creation request."""
 
     password: str
-    enterprise_id: int | None = None 
+    enterprise_id: int | None = None

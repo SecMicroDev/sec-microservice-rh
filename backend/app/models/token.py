@@ -1,6 +1,3 @@
-
-
-
 from sqlmodel import SQLModel
 
 

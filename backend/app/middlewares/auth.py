@@ -84,7 +84,7 @@ def authorize_user(
             detail="User does not have permission to access this resource",
         )
 
-    if custom_checks!= None and not custom_checks:
+    if custom_checks != None and not custom_checks:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User does not have permission to access this resource",

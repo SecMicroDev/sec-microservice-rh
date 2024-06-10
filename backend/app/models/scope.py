@@ -47,17 +47,15 @@ class BaseScope(SQLModel):
     @classmethod
     def get_scopes_by_ids(cls, enterprise_id: int, ids: list[int]) -> SelectOfScalar:
         query = select(Scope).where(Scope.enterprise_id == enterprise_id)
-        query = query.where(
-            or_(*[Scope.id == id for id in ids])
-        )
+        query = query.where(or_(*[Scope.id == id for id in ids]))
         return query
 
     @classmethod
-    def get_scopes_by_names(cls, enterprise_id: int, names: list[str]) -> SelectOfScalar:
+    def get_scopes_by_names(
+        cls, enterprise_id: int, names: list[str]
+    ) -> SelectOfScalar:
         query = select(Scope).where(Scope.enterprise_id == enterprise_id)
-        query = query.where(
-            or_(*[Scope.name == name for name in names])
-        )
+        query = query.where(or_(*[Scope.name == name for name in names]))
         return query
 
 
@@ -108,19 +106,34 @@ class DefaultScopeSchema(SQLModel):
     description: str
 
     @classmethod
-    def get_default_scopes(cls) -> dict[
-        Union[Literal[DefaultScope.SELLS],
-                Literal[DefaultScope.HUMAN_RESOURCE],
-                Literal[DefaultScope.PATRIMONIAL],
-                Literal[DefaultScope.ALL]
-                ],
-        dict[str, Any]
+    def get_default_scopes(
+        cls,
+    ) -> dict[
+        Union[
+            Literal[DefaultScope.SELLS],
+            Literal[DefaultScope.HUMAN_RESOURCE],
+            Literal[DefaultScope.PATRIMONIAL],
+            Literal[DefaultScope.ALL],
+        ],
+        dict[str, Any],
     ]:
         return {
-            DefaultScope.SELLS: dict(name=DefaultScope.SELLS.value, description="Sells scope from the enterprise."),
-            DefaultScope.HUMAN_RESOURCE: dict(name=DefaultScope.HUMAN_RESOURCE.value, description="Human resource from the enterprise."),
-            DefaultScope.PATRIMONIAL: dict(name=DefaultScope.PATRIMONIAL.value, description="Patrimonial scope from the enterprise."),
-            DefaultScope.ALL: dict(name=DefaultScope.ALL.value, description="All scopes from the enterprise.")
+            DefaultScope.SELLS: dict(
+                name=DefaultScope.SELLS.value,
+                description="Sells scope from the enterprise.",
+            ),
+            DefaultScope.HUMAN_RESOURCE: dict(
+                name=DefaultScope.HUMAN_RESOURCE.value,
+                description="Human resource from the enterprise.",
+            ),
+            DefaultScope.PATRIMONIAL: dict(
+                name=DefaultScope.PATRIMONIAL.value,
+                description="Patrimonial scope from the enterprise.",
+            ),
+            DefaultScope.ALL: dict(
+                name=DefaultScope.ALL.value,
+                description="All scopes from the enterprise.",
+            ),
         }
 
 

@@ -5,16 +5,16 @@ from app.models.user import UserRead, UserUpdate
 
 
 class UserEvents(str, Enum):
-    USER_CREATED = 'USER_CREATED'
-    USER_UPDATED = 'USER_UPDATED'
-    USER_DELETED = 'USER_DELETED'
-    USER_LOGIN   = 'USER_LOGIN'
+    USER_CREATED = "USER_CREATED"
+    USER_UPDATED = "USER_UPDATED"
+    USER_DELETED = "USER_DELETED"
+    USER_LOGIN = "USER_LOGIN"
 
 
 class EnterpriseEvents(str, Enum):
-    ENTERPRISE_CREATED = 'ENTERPRISE_CREATED'
-    ENTERPRISE_UPDATED = 'ENTERPRISE_UPDATED'
-    ENTERPRISE_DELETED = 'ENTERPRISE_DELETED'
+    ENTERPRISE_CREATED = "ENTERPRISE_CREATED"
+    ENTERPRISE_UPDATED = "ENTERPRISE_UPDATED"
+    ENTERPRISE_DELETED = "ENTERPRISE_DELETED"
 
 
 class BaseEventMessage(SQLModel):
@@ -66,4 +66,3 @@ class EnterpriseDeleteWithId(SQLModel):
 class EnterpriseDeleteEvent(BaseEventMessage):
     event: str = EnterpriseEvents.ENTERPRISE_DELETED.value
     data: EnterpriseDeleteWithId
-

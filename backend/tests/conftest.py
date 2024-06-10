@@ -35,18 +35,16 @@ SQLModel.metadata.create_all(bind=engine)
 
 @asynccontextmanager
 async def override_lifespan(app: FastAPI, *args, **kwargs):
-    print('Span')
+    print("Span")
     yield
 
 
 async def test_sender_on_loop(message: str):
-    pass 
-
+    pass
 
 
 def override_get_async_message_sender_on_loop():
     return test_sender_on_loop
-
 
 
 @pytest.fixture(scope="function")
@@ -59,7 +57,7 @@ def db_session():
 
     try:
         yield session
-        print('Closing session...............')
+        print("Closing session...............")
     finally:
         if session.is_active:
             session.close()
@@ -75,12 +73,14 @@ def get_test_client_authenticated(user: UserRead):
     def override_get_session():
         yield session
 
-    def override_authenticate_user(token: str = '') -> Any:
+    def override_authenticate_user(token: str = "") -> Any:
         user_dict = user.model_dump()
-        user_dict.pop("hashed_password", '')
+        user_dict.pop("hashed_password", "")
         return UserRead(**user_dict)
 
-    app.dependency_overrides[get_async_message_sender_on_loop] = override_get_async_message_sender_on_loop
+    app.dependency_overrides[get_async_message_sender_on_loop] = (
+        override_get_async_message_sender_on_loop
+    )
     app.dependency_overrides[get_db] = override_get_session
     app.dependency_overrides[authenticate_user] = override_authenticate_user
     app.router.lifespan_context = override_lifespan
@@ -100,7 +100,9 @@ def test_client(db_session: Session):
 
     app.dependency_overrides[get_db] = override_get_session
     app.router.lifespan_context = override_lifespan
-    app.dependency_overrides[get_async_message_sender_on_loop] = override_get_async_message_sender_on_loop
+    app.dependency_overrides[get_async_message_sender_on_loop] = (
+        override_get_async_message_sender_on_loop
+    )
 
     with TestClient(app) as test_client:
         yield test_client
@@ -123,20 +125,22 @@ def enterprise_role_scope(db_session: Session) -> dict[str, Any]:
         role = Role(**roleschema)
         if default_enterprise.roles is not None:
             default_enterprise.roles.append(role)
-        else: default_enterprise.roles = [role]
+        else:
+            default_enterprise.roles = [role]
 
     for scopeschema in default_scopes.values():
         scope = Scope(**scopeschema)
         if default_enterprise.scopes is not None:
             default_enterprise.scopes.append(scope)
-        else: default_enterprise.scopes = [scope]
+        else:
+            default_enterprise.scopes = [scope]
 
     session.add(default_enterprise)
     session.commit()
     session.refresh(default_enterprise)
 
     print("###############################################")
-    print('Created defaults: ', str(default_enterprise.model_dump()))
+    print("Created defaults: ", str(default_enterprise.model_dump()))
 
     return {
         "enterprise": default_enterprise,
@@ -172,14 +176,20 @@ def create_default_user(db_session: Session, enterprise_role_scope: dict[str, An
 
 
 @pytest.fixture(scope="function")
-def test_client_authenticated_default(db_session: Session, create_default_user: dict[str, Any]):
+def test_client_authenticated_default(
+    db_session: Session, create_default_user: dict[str, Any]
+):
     user: User = create_default_user["user"]
-    role: Role = list(filter(lambda role: role.id == user.role_id, create_default_user["roles"]))[0]
-    scope: Scope = list(filter(lambda scope: scope.id == user.scope_id, create_default_user["scopes"]))[0]
+    role: Role = list(
+        filter(lambda role: role.id == user.role_id, create_default_user["roles"])
+    )[0]
+    scope: Scope = list(
+        filter(lambda scope: scope.id == user.scope_id, create_default_user["scopes"])
+    )[0]
     enterprise: Enterprise = create_default_user["user"].enterprise
 
     user_dict = user.model_dump()
-    user_dict.pop("hashed_password", '')
+    user_dict.pop("hashed_password", "")
 
     print("###############################################")
     print(str(user_dict))
@@ -200,12 +210,14 @@ def test_client_authenticated_default(db_session: Session, create_default_user: 
         # finally:
         #     db_session.close()
 
-    def override_authenticate_user(token: str = '') -> Any:
-       return user_read 
+    def override_authenticate_user(token: str = "") -> Any:
+        return user_read
 
     app.dependency_overrides[get_db] = override_get_session
     app.dependency_overrides[authenticate_user] = override_authenticate_user
-    app.dependency_overrides[get_async_message_sender_on_loop] = override_get_async_message_sender_on_loop
+    app.dependency_overrides[get_async_message_sender_on_loop] = (
+        override_get_async_message_sender_on_loop
+    )
     app.router.lifespan_context = override_lifespan
 
     test_client = TestClient(app)
@@ -224,9 +236,10 @@ def test_client_auth_default_with_broker(test_client_authenticated_default: Test
     my_app = test_client_authenticated_default.app
 
     if isinstance(my_app, FastAPI):
-        my_app.dependency_overrides[get_async_message_sender_on_loop] = get_async_message_sender_on_loop
+        my_app.dependency_overrides[get_async_message_sender_on_loop] = (
+            get_async_message_sender_on_loop
+        )
 
     test_client_authenticated_default.app = my_app
 
     return test_client_authenticated_default
-

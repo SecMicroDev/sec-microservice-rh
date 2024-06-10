@@ -40,19 +40,14 @@ class BaseRole(SQLModel):
     @classmethod
     def get_roles_by_ids(cls, enterprise_id: int, ids: list[int]) -> SelectOfScalar:
         query = select(Role).where(Role.enterprise_id == enterprise_id)
-        query = query.where(
-            or_(*[Role.id == id for id in ids])
-        )
+        query = query.where(or_(*[Role.id == id for id in ids]))
         return query
 
     @classmethod
     def get_roles_by_names(cls, enterprise_id: int, names: list[str]) -> SelectOfScalar:
         query = select(Role).where(Role.enterprise_id == enterprise_id)
-        query = query.where(
-            or_(*[Role.name == name for name in names])
-        )
+        query = query.where(or_(*[Role.name == name for name in names]))
         return query
-
 
 
 class Role(BaseIDModel, BaseRole, table=True):
@@ -62,7 +57,6 @@ class Role(BaseIDModel, BaseRole, table=True):
     __table_args__ = (UniqueConstraint("name", "enterprise_id"),)
     users: list["User"] = Relationship(back_populates="role")
     enterprise: "Enterprise" = Relationship(back_populates="roles")
-
 
 
 class RoleCreate(BaseRole):
@@ -97,16 +91,32 @@ class DefaultRoleSchema(SQLModel):
     description: str
 
     @classmethod
-    def get_default_roles(cls) -> dict[
-        Union[Literal[DefaultRole.OWNER],
-              Literal[DefaultRole.COLLABORATOR],
-              Literal[DefaultRole.MANAGER]],
-        dict[str, Any]
+    def get_default_roles(
+        cls,
+    ) -> dict[
+        Union[
+            Literal[DefaultRole.OWNER],
+            Literal[DefaultRole.COLLABORATOR],
+            Literal[DefaultRole.MANAGER],
+        ],
+        dict[str, Any],
     ]:
         return {
-            DefaultRole.OWNER: dict(name=DefaultRole.OWNER.value, description="The owner of the enterprise.", hierarchy=1),
-            DefaultRole.COLLABORATOR: dict(name=DefaultRole.COLLABORATOR.value, description="A collaborator of the enterprise.", hierarchy=3),
-            DefaultRole.MANAGER: dict(name=DefaultRole.MANAGER.value, description="A manager of the enterprise.", hierarchy=2),
+            DefaultRole.OWNER: dict(
+                name=DefaultRole.OWNER.value,
+                description="The owner of the enterprise.",
+                hierarchy=1,
+            ),
+            DefaultRole.COLLABORATOR: dict(
+                name=DefaultRole.COLLABORATOR.value,
+                description="A collaborator of the enterprise.",
+                hierarchy=3,
+            ),
+            DefaultRole.MANAGER: dict(
+                name=DefaultRole.MANAGER.value,
+                description="A manager of the enterprise.",
+                hierarchy=2,
+            ),
         }
 
 

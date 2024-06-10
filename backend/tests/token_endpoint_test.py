@@ -15,12 +15,22 @@ def get_user_data():
     return {
         "id": 1,
         "username": "test",
-        "email": "testuser@test.mail.com",  
+        "email": "testuser@test.mail.com",
         "created_at": "2022-01-01T00:00:00",
         "edited_at": "2022-01-02T00:00:00",
-        "role": {"id": 1, **(DefaultRoleSchema.get_default_roles()[DefaultRole.MANAGER])},
-        "scope": {"id": 1, **(DefaultScopeSchema.get_default_scopes()[DefaultScope.PATRIMONIAL])},
-        "enterprise": {"id": 1, "name": "enterprise1", "accountable_email": "test@test.mail.com"}
+        "role": {
+            "id": 1,
+            **(DefaultRoleSchema.get_default_roles()[DefaultRole.MANAGER]),
+        },
+        "scope": {
+            "id": 1,
+            **(DefaultScopeSchema.get_default_scopes()[DefaultScope.PATRIMONIAL]),
+        },
+        "enterprise": {
+            "id": 1,
+            "name": "enterprise1",
+            "accountable_email": "test@test.mail.com",
+        },
     }
 
 
@@ -42,7 +52,7 @@ def test_authenticate_user_valid_token():
 
 def test_authenticate_user_expired_token():
     # with patch('app.auth.decode_jwt_token') as mock_decode:
-        # mock_decode.side_effect = JWTError("Expired token")
+    # mock_decode.side_effect = JWTError("Expired token")
     token = create_valid_token(-10)
 
     with pytest.raises(HTTPException) as exc_info:
@@ -51,7 +61,7 @@ def test_authenticate_user_expired_token():
 
 
 def test_authenticate_user_invalid_signature():
-    with patch('app.auth.jwt_utils.decode_jwt_token') as mock_decode:
+    with patch("app.auth.jwt_utils.decode_jwt_token") as mock_decode:
         mock_decode.side_effect = JWSSignatureError("Invalid signature")
         with pytest.raises(HTTPException) as exc_info:
             authenticate_user("invalid_signature_token")
@@ -61,13 +71,15 @@ def test_authenticate_user_invalid_signature():
 def test_authorize_user_valid_scope():
     user = UserRead(**get_user_data())
     user.role = RoleRelation(**DefaultRoleSchema.get_default_roles()[DefaultRole.OWNER])
-    user.scope = ScopeRelation(**DefaultScopeSchema.get_default_scopes()[DefaultScope.ALL])
+    user.scope = ScopeRelation(
+        **DefaultScopeSchema.get_default_scopes()[DefaultScope.ALL]
+    )
     assert authorize_user(user, ["All"], 1) == user
 
 
 def test_authorize_user_invalid_scope():
     user_read = get_user_data()
-    user_read.update({ "scope": { "name": "Selling" } })
+    user_read.update({"scope": {"name": "Selling"}})
     user = UserRead(**user_read)
     with pytest.raises(HTTPException) as exc_info:
         authorize_user(user, ["All"], 1)
@@ -77,8 +89,12 @@ def test_authorize_user_invalid_scope():
 def test_authorize_user_invalid_role():
     user = UserRead(**get_user_data())
 
-    user.role = RoleRelation(**DefaultRoleSchema.get_default_roles()[DefaultRole.COLLABORATOR])
-    user.scope = ScopeRelation(**DefaultScopeSchema.get_default_scopes()[DefaultScope.SELLS])
+    user.role = RoleRelation(
+        **DefaultRoleSchema.get_default_roles()[DefaultRole.COLLABORATOR]
+    )
+    user.scope = ScopeRelation(
+        **DefaultScopeSchema.get_default_scopes()[DefaultScope.SELLS]
+    )
 
     with pytest.raises(HTTPException) as exc_info:
         authorize_user(user, ["Selling"], 2)

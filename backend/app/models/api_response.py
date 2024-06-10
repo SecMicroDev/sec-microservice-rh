@@ -11,5 +11,6 @@ class APIResponse(SQLModel):
         status (int): The status code of the response.
         message (str): The message associated with the response.
     """
+
     status: int
     message: str

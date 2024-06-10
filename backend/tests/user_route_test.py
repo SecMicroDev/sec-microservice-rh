@@ -17,10 +17,14 @@ from .conftest import get_test_client_authenticated
 
 def _create_user_schema(**kwargs):
     role: Role = list(
-        filter(lambda x: x.name == DefaultRole.COLLABORATOR.value, kwargs.get("roles", []))
+        filter(
+            lambda x: x.name == DefaultRole.COLLABORATOR.value, kwargs.get("roles", [])
+        )
     )[0]
     scope: Scope = list(
-        filter(lambda x: x.name == DefaultScope.PATRIMONIAL.value, kwargs.get("scopes", []))
+        filter(
+            lambda x: x.name == DefaultScope.PATRIMONIAL.value, kwargs.get("scopes", [])
+        )
     )[0]
     enterprise = kwargs.get("enterprise")
 
@@ -48,7 +52,7 @@ def _create_user_on_db(session: Session, **kwargs) -> UserRead:
         **user.model_dump(),
         role=RoleRelation(**user.role.model_dump()),
         scope=ScopeRelation(**user.scope.model_dump()),
-        enterprise=EnterpriseRelation(**user.enterprise.model_dump())
+        enterprise=EnterpriseRelation(**user.enterprise.model_dump()),
     )
 
     return user_read
@@ -124,22 +128,36 @@ def test_create_user(
 
 
 def test_user_unauthorized_to_create(
-    db_session: Session,
-    enterprise_role_scope: dict[str, Any]
+    db_session: Session, enterprise_role_scope: dict[str, Any]
 ):
     """User should not be created"""
     # db_session = next(db_session_manual())
     user: UserRead | None = None
-    role_id = list(map(lambda x: x.id, 
-                        filter(lambda x: x.name == DefaultRole.COLLABORATOR, enterprise_role_scope["roles"])))[0]
+    role_id = list(
+        map(
+            lambda x: x.id,
+            filter(
+                lambda x: x.name == DefaultRole.COLLABORATOR,
+                enterprise_role_scope["roles"],
+            ),
+        )
+    )[0]
 
-    scope_id = list(map(lambda x: x.id, 
-                        filter(lambda x: x.name == DefaultScope.SELLS, enterprise_role_scope["scopes"])))[0]
+    scope_id = list(
+        map(
+            lambda x: x.id,
+            filter(
+                lambda x: x.name == DefaultScope.SELLS, enterprise_role_scope["scopes"]
+            ),
+        )
+    )[0]
 
     with db_session:
         user = _create_user_on_db(db_session, **enterprise_role_scope)
 
-    session, connection, transaction, test_client = next(get_test_client_authenticated(user=user))
+    session, connection, transaction, test_client = next(
+        get_test_client_authenticated(user=user)
+    )
 
     # Creating a new user
     resp = test_client.post(
@@ -151,7 +169,7 @@ def test_user_unauthorized_to_create(
             "password": "mypassword",
             "enterprise_id": user.enterprise_id,
             "role_id": role_id,
-            "scope_id": scope_id 
+            "scope_id": scope_id,
         },
     )
 
@@ -210,10 +228,7 @@ def test_update_current_user(
     assert response.json()["message"] == "Current user updated"
 
     with db_session as session:
-        updated_user = session.get(
-            User,
-            create_default_user["user"].id
-        )
+        updated_user = session.get(User, create_default_user["user"].id)
 
         assert updated_user.username == "newusername"
         assert updated_user.email == "newemail@example.com"
@@ -227,7 +242,7 @@ def test_get_user(
 ):
     """User should be retrieved"""
     test_client = test_client_authenticated_default
-    user_id = create_default_user['user'].id  # Replace with the desired user ID
+    user_id = create_default_user["user"].id  # Replace with the desired user ID
     response = test_client.get(f"users/{user_id}")
 
     assert response.status_code == status.HTTP_200_OK
@@ -258,8 +273,8 @@ def test_get_all_users(
             "full_name": "Test User 3",
             "password": "mypassword",
             "enterprise_id": create_default_user["user"].enterprise_id,
-            "role_id":create_default_user["roles"][0].id,
-            "scope_id": create_default_user["scopes"][0].id
+            "role_id": create_default_user["roles"][0].id,
+            "scope_id": create_default_user["scopes"][0].id,
         },
     )
 
@@ -269,7 +284,7 @@ def test_get_all_users(
     assert response.json()["status"] == 200
     assert response.json()["message"] == "Users retrieved"
 
-    users = response.json()["data"] 
+    users = response.json()["data"]
     assert len(users) == 2
 
 
@@ -304,7 +319,7 @@ def test_update_user(
         assert updated_user.username == user["username"]
         assert updated_user.email == user["email"]
         assert updated_user.full_name == user["full_name"]
-        assert validate_hashed_data('newpassword', updated_user.hashed_password)
+        assert validate_hashed_data("newpassword", updated_user.hashed_password)
 
 
 def test_delete_user(

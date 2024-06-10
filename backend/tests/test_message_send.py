@@ -6,8 +6,15 @@ from fastapi.testclient import TestClient
 
 from app.messages.client import AsyncSender
 from app.models.enterprise import BaseEnterprise, Enterprise, EnterpriseUpdate
-from app.models.user import FirstUserCreate, UserCreate, UserRead, UserUpdate, UserUpdateMe
+from app.models.user import (
+    FirstUserCreate,
+    UserCreate,
+    UserRead,
+    UserUpdate,
+    UserUpdateMe,
+)
 from app.router.utils import EnterpriseUpdateWithId, UserEvents, UserUpdateWithId
+
 
 @patch.object(AsyncSender, "publish")
 def test_create_user(mock_publish: Mock, test_client_auth_default_with_broker):
@@ -34,7 +41,8 @@ def test_create_user(mock_publish: Mock, test_client_auth_default_with_broker):
             if isinstance(x, str):
                 all_info = json.loads(x)
                 assert all_info["event"] == UserEvents.USER_CREATED.value
-                x_dict = all_info['data']
+                x_dict = all_info["data"]
+
                 def compare_val(k, v):
                     return v == user_dict[k] if k in user_dict else False
 
@@ -76,7 +84,8 @@ def test_update_current_user(mock_publish: Mock, test_client_auth_default_with_b
             if isinstance(x, str):
                 all_info = json.loads(x)
                 # assert all_info["event"] == UserEvents.USER_UPDATED.value
-                x_dict = all_info['data']
+                x_dict = all_info["data"]
+
                 def compare_val(k, v):
                     return v == user_dict[k] if k in user_dict else False
 
@@ -95,7 +104,6 @@ def test_update_current_user(mock_publish: Mock, test_client_auth_default_with_b
     assert any(map(lambda x: compare_dict(x), mock_publish.call_args.args))
 
 
-
 @patch.object(AsyncSender, "publish")
 def test_update_user(mock_publish: Mock, test_client_auth_default_with_broker):
     client: TestClient = test_client_auth_default_with_broker
@@ -104,7 +112,7 @@ def test_update_user(mock_publish: Mock, test_client_auth_default_with_broker):
         username="testuser2",
         password="testpassword2",
         email="emailtest2@test.com.br",
-        role_id=2
+        role_id=2,
     )
 
     mock_publish.return_value = AsyncMock()
@@ -122,7 +130,8 @@ def test_update_user(mock_publish: Mock, test_client_auth_default_with_broker):
         try:
             if isinstance(x, str):
                 all_info = json.loads(x)
-                x_dict = all_info['data']
+                x_dict = all_info["data"]
+
                 def compare_val(k, v):
                     return v == user_dict[k] if k in user_dict else False
 
@@ -138,7 +147,6 @@ def test_update_user(mock_publish: Mock, test_client_auth_default_with_broker):
             return False
 
     assert any(map(lambda x: compare_dict(x), mock_publish.call_args.args))
-
 
 
 @patch.object(AsyncSender, "publish")
@@ -158,8 +166,8 @@ def test_delete_user(mock_publish: Mock, test_client_auth_default_with_broker):
         try:
             if isinstance(x, str):
                 all_info = json.loads(x)
-                x_dict = all_info['data']
-                return x_dict['id'] == user_id
+                x_dict = all_info["data"]
+                return x_dict["id"] == user_id
             return False
         except json.JSONDecodeError:
             return False
@@ -171,8 +179,7 @@ def test_delete_user(mock_publish: Mock, test_client_auth_default_with_broker):
 def test_create_enterprise(mock_publish: Mock, test_client_auth_default_with_broker):
     client: TestClient = test_client_auth_default_with_broker
     enterprise = BaseEnterprise(
-        name="testenterprise2",
-        accountable_email='emailchange@test.com' 
+        name="testenterprise2", accountable_email="emailchange@test.com"
     )
 
     user = FirstUserCreate(
@@ -183,7 +190,10 @@ def test_create_enterprise(mock_publish: Mock, test_client_auth_default_with_bro
 
     mock_publish.return_value = AsyncMock()
 
-    response = client.post("/enterprise/signup", json={"enterprise": enterprise.model_dump(), "user": user.model_dump()})
+    response = client.post(
+        "/enterprise/signup",
+        json={"enterprise": enterprise.model_dump(), "user": user.model_dump()},
+    )
 
     assert response.status_code == 200
 
@@ -193,14 +203,16 @@ def test_create_enterprise(mock_publish: Mock, test_client_auth_default_with_bro
         try:
             if isinstance(x, str):
                 all_info = json.loads(x)
-                x_dict = all_info['data']
-                return x_dict['enterprise']['name'] == enterprise.name and x_dict['username'] == user.username
+                x_dict = all_info["data"]
+                return (
+                    x_dict["enterprise"]["name"] == enterprise.name
+                    and x_dict["username"] == user.username
+                )
             return False
         except json.JSONDecodeError:
             return False
 
     assert any(map(lambda x: compare_dict(x), mock_publish.call_args.args))
-
 
 
 @patch.object(AsyncSender, "publish")
@@ -226,13 +238,18 @@ def test_update_enterprise(mock_publish: Mock, test_client_auth_default_with_bro
         try:
             if isinstance(x, str):
                 all_info = json.loads(x)
-                x_dict = all_info['data']
+                x_dict = all_info["data"]
+
                 def compare_val(k, v):
                     return v == enterprise_dict[k] if k in enterprise_dict else False
 
                 return all(
                     [
-                        compare_val(key, val) if key in enterprise_dict.keys() else False
+                        (
+                            compare_val(key, val)
+                            if key in enterprise_dict.keys()
+                            else False
+                        )
                         for key, val in x_dict.items()
                     ]
                 )
@@ -245,7 +262,11 @@ def test_update_enterprise(mock_publish: Mock, test_client_auth_default_with_bro
 
 
 @patch.object(AsyncSender, "publish")
-def test_delete_enterprise(mock_publish: Mock, test_client_auth_default_with_broker, enterprise_role_scope: dict[str, Any]):
+def test_delete_enterprise(
+    mock_publish: Mock,
+    test_client_auth_default_with_broker,
+    enterprise_role_scope: dict[str, Any],
+):
     client: TestClient = test_client_auth_default_with_broker
     enterprise: Enterprise = enterprise_role_scope["enterprise"]
 
@@ -261,11 +282,10 @@ def test_delete_enterprise(mock_publish: Mock, test_client_auth_default_with_bro
         try:
             if isinstance(x, str):
                 all_info = json.loads(x)
-                x_dict = all_info['data']
-                return x_dict['id'] == enterprise.id
+                x_dict = all_info["data"]
+                return x_dict["id"] == enterprise.id
             return False
         except json.JSONDecodeError:
             return False
 
     assert any(map(lambda x: compare_dict(x), mock_publish.call_args.args))
-
