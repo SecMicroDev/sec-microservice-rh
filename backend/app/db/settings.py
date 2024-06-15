@@ -1,6 +1,5 @@
 """ Variables defined by the environment """
 
-
 import os
 
 ENV = os.environ["API_ENV"]

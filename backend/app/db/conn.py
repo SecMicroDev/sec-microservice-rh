@@ -1,17 +1,16 @@
 """Module for database setup and utilities using SQLModel and SQLAlchemy."""
 
-from sqlmodel import create_engine, SQLModel
-from sqlalchemy.orm import sessionmaker
+from sqlmodel import Session, create_engine, SQLModel
+import sqlalchemy as sa
+
+
 from . import settings as st
 
 
-SQLALCHEMY_DATABASE_URL = (
-    f"postgresql://{st.DB_USER}:{st.DB_PASSWORD}@{st.DB_HOST}:5432/{st.DB_NAME}"
-)
-
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+def setup_guids_postgresql(engine) -> None:
+    with Session(engine) as session:
+        session.exec('create EXTENSION if not EXISTS "pgcrypto"')
+        session.commit()
 
 
 def create_db():
@@ -31,8 +30,18 @@ def get_db():
         Session: a new database session
     """
 
-    session = SessionLocal()
+    session = Session(autocommit=False, autoflush=False, bind=engine)
     try:
         yield session
     finally:
-        session.close()
+        if session.is_active:
+            session.close()
+
+
+SQLALCHEMY_DATABASE_URL = (
+    f"postgresql://{st.DB_USER}:{st.DB_PASSWORD}@{st.DB_HOST}:5432/{st.DB_NAME}"
+)
+
+GUID_SERVER_DEFAULT_PSQL = sa.DefaultClause(sa.text("gen_random_uuid()"))
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL)

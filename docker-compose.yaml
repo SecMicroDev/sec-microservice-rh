@@ -15,25 +15,44 @@ services:
       DB_HOST: ${DB_HOST:-postgres-test}
       DB_PASSWORD: ${DB_PASSWORD:-password}
       API_ENV: ${API_ENV:-test}
+      JWT_ACCESS_EXPIRE_MINUTES: ${JWT_ACCESS_EXPIRE_MINUTES:-30} 
+      JWT_REFRESH_EXPIRE_MINUTES: ${JWT_REFRESH_EXPIRE_MINUTES:-2880}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-testunsafesecret}
+      JWT_REFRESH_SECRET_KEY: ${JWT_REFRESH_SECRET_KEY:-testunsaferefresh}
+    networks:
+    - service
+    - db
     depends_on:
     - postgres-test
+    volumes:
+      - ./backend/:/backend/
   api-test:
     container_name: api-test
     build:
       context: ./ 
-    ports:
-    - 9080:80
+    # ports:
+    # - 9080:80
     command: 'poetry run pytest tests -x -vv --cov=. --cov-report=xml:./code-coverage/coverage.xml'
     # command: tail -f /dev/null 
     volumes:
     - .coverage/:/backend/code-coverage/
     - ./backend/tests/:/backend/tests
+    # - ./.venv:/opt/venv/
+    networks:
+    - service
+    - db
     environment:
       DB_NAME: ${DB_NAME:-testdb}
       DB_USER: ${DB_USER:-user}
       DB_HOST: ${DB_HOST:-postgres-test}
       DB_PASSWORD: ${DB_PASSWORD:-password}
       API_ENV: ${API_ENV:-test}
+      JWT_ACCESS_EXPIRE_MINUTES: ${JWT_ACCESS_EXPIRE_MINUTES:-30} 
+      JWT_REFRESH_EXPIRE_MINUTES: ${JWT_REFRESH_EXPIRE_MINUTES:-2880}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-testunsafesecret}
+      JWT_REFRESH_SECRET_KEY: ${JWT_REFRESH_SECRET_KEY:-testunsaferefresh}
     depends_on:
     - postgres-test
   postgres-test:
@@ -45,7 +64,26 @@ services:
       POSTGRES_DB: ${DB_NAME:-testdb}
       POSTGRES_USER: ${DB_USER:-user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+
+    # ports:
+    # - 5432:5432
+
+    networks:
+    - db 
+  my-rabbit:
+    container_name: rabbit-broker
+    image: rabbitmq:3-management
+
     ports:
-    - 5432:5432
+    - 9180:15672 
+    - 5672:5672
+    - 25676:25676
+
+    networks:
+    - service
+
 # volumes:
   # pgdata:
+networks:
+  service:
+  db:
