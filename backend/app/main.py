@@ -32,7 +32,7 @@ from .router.login import router as loginRouter
 create_db()
 
 
-external_update_listener = AsyncListener("rh_event_queue", UpdateEvent.process_message)
+external_update_listener = AsyncListener("external.rh_event", UpdateEvent.process_message)
 
 
 @asynccontextmanager
