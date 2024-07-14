@@ -9,6 +9,7 @@ from app.models.enterprise import (
     EnterpriseRelation,
     EnterpriseResponse,
     EnterpriseUpdate,
+    EnterpriseWithHierarchy,
 )
 from app.middlewares.auth import authenticate_user, authorize_user
 from app.db.conn import get_db
@@ -112,14 +113,10 @@ async def create_enterprise(
         session.commit()
         session.refresh(new_user)
 
-        if any(
-            (
-                new_user is None,
-                new_user.enterprise is None,
-                new_user.role is None,
-                new_user.scope is None,
-            )
-        ):
+        if new_user is None or \
+            new_user.enterprise is None or \
+            new_user.role is None or \
+            new_user.scope is None :
             raise HTTPException(
                 status_code=500, detail="The enterprise could not be created"
             )
@@ -131,9 +128,19 @@ async def create_enterprise(
                 scope=ScopeRelation(**new_user.scope.model_dump()),
             )
 
+            print(f'Signup User: {user_read.model_dump_json()}')
+
+
+            roles=map(lambda r: RoleRelation(**r.model_dump()), new_user.enterprise.roles)
+            scopes=map(lambda s: ScopeRelation(**s.model_dump()), new_user.enterprise.scopes)
+
             await send_message(
                 EnterpriseCreateEvent(
-                    data=new_user.enterprise,
+                    data=EnterpriseWithHierarchy(
+                        roles=list(roles),
+                        scopes=list(scopes),
+                        **new_user.enterprise.model_dump()
+                    )
                 ).model_dump_json()
             )
 
@@ -206,15 +213,12 @@ def get_full_enterprise(
 
     with db_session as session:
         enterprise = session.get(Enterprise, identified_user.enterprise_id)
-
-        if any(
-            (
-                enterprise is None,
-                enterprise.users is None,
-                enterprise.roles is None,
-                enterprise.scopes is None,
-            )
-        ):
+ 
+        if enterprise is None or any((
+            enterprise.users is None,
+            enterprise.roles is None,
+            enterprise.scopes is None,
+        )):
             raise HTTPException(status_code=404, detail="Enterprise not found")
 
         resp = dict(

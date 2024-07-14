@@ -2,6 +2,8 @@ from typing import TYPE_CHECKING, Optional
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.db.base import BaseIDModel
+from app.models.role import RoleRelation
+from app.models.scope import ScopeRelation
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -43,6 +45,11 @@ class EnterpriseRelation(BaseIDModel, BaseEnterprise):
     """Represents an enterprise relation."""
 
     pass
+
+
+class EnterpriseWithHierarchy(EnterpriseRelation):
+    roles: list["RoleRelation"]
+    scopes: list["ScopeRelation"]
 
 
 class EnterpriseResponse(SQLModel):
