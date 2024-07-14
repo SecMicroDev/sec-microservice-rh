@@ -7,7 +7,7 @@ from typing import Any, Union
 from fastapi import HTTPException, status
 from jose import jwt
 from jose.exceptions import JWKError, JWSSignatureError, JWTClaimsError
-from app.auth.settings import ACCESS_TOKEN_EXPIRE_MINUTES, JWT_SECRET_KEY, ALGORITHM
+from app.auth.settings import ACCESS_TOKEN_EXPIRE_MINUTES, JWT_SECRET_ENCODE_KEY, JWT_SECRET_DECODE_KEY, ALGORITHM
 
 import json
 
@@ -24,7 +24,7 @@ class JWTValidationError(Exception):
 def create_jwt_token(
     payload: dict,
     expires: int = ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-    config: dict[str, str] = {"JWT_KEY": JWT_SECRET_KEY, "JWT_ALGO": ALGORITHM},
+    config: dict[str, Any] = {"JWT_KEY": JWT_SECRET_ENCODE_KEY, "JWT_ALGO": ALGORITHM},
 ) -> str:
     """
     Create a signed token with a defined algorithm and secret
@@ -49,7 +49,7 @@ def create_jwt_token(
 
 def decode_jwt_token(
     token: str,
-    config: dict[str, Any] = {"JWT_KEY": JWT_SECRET_KEY, "JWT_ALGO": ALGORITHM},
+    config: dict[str, Any] = {"JWT_KEY": JWT_SECRET_DECODE_KEY, "JWT_ALGO": ALGORITHM},
 ) -> Union[dict[str, Any], None]:
     """
     Decode a signed token with a defined algorithm and secret
@@ -86,9 +86,15 @@ def get_user_data(token: str) -> dict[str, Any]:
     )
     try:
         payload = decode_jwt_token(token)
-        user_data: str = payload.get("sub")
+
+        if payload is None or payload.get("sub") is None:
+            raise credentials_exception
+
+        user_data: dict = payload.get("sub", {})
+
         if user_data is None:
             raise credentials_exception
+
     except JWTValidationError:
         raise credentials_exception
 
