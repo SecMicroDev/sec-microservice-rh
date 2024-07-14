@@ -1,6 +1,7 @@
 from enum import Enum
 from sqlmodel import SQLModel
-from app.models.enterprise import EnterpriseRelation
+from app.models.enterprise import EnterpriseRelation, EnterpriseUpdate, EnterpriseWithHierarchy
+from app.models.scope import DefaultScope
 from app.models.user import UserRead, UserUpdate
 
 
@@ -19,15 +20,21 @@ class EnterpriseEvents(str, Enum):
 
 class BaseEventMessage(SQLModel):
     event: str
+    event_scope: str = DefaultScope.ALL.value 
 
 
-class UserCreateEvent(BaseEventMessage):
+class BaseUserEventMessage(BaseEventMessage):
+    event_scope: str = DefaultScope.ALL.value 
+
+
+class UserCreateEvent(BaseUserEventMessage):
     event: str = UserEvents.USER_CREATED.value
     data: UserRead
 
 
 class UserUpdateWithId(UserUpdate):
     id: int
+    enterprise_id: int
 
 
 class UserDeleteWithId(SQLModel):
@@ -35,22 +42,24 @@ class UserDeleteWithId(SQLModel):
     enterprise_id: int
 
 
-class UserUpdateEvent(BaseEventMessage):
+class UserUpdateEvent(BaseUserEventMessage):
     event: str = UserEvents.USER_UPDATED.value
+    update_scope: str = DefaultScope.ALL.value
+    user: UserRead
     data: UserUpdateWithId
 
 
-class UserDeleteEvent(BaseEventMessage):
+class UserDeleteEvent(BaseUserEventMessage):
     event: str = UserEvents.USER_DELETED.value
     data: UserDeleteWithId
 
 
 class EnterpriseCreateEvent(BaseEventMessage):
     event: str = EnterpriseEvents.ENTERPRISE_CREATED.value
-    data: EnterpriseRelation
+    data: EnterpriseWithHierarchy
 
 
-class EnterpriseUpdateWithId(UserUpdate):
+class EnterpriseUpdateWithId(EnterpriseUpdate):
     id: int
 
 

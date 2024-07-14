@@ -8,7 +8,7 @@ from collections.abc import Callable, Coroutine
 from datetime import datetime
 import json
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlmodel import Session, col, or_, and_
+from sqlmodel import Session, col, or_, and_, select
 from sqlmodel.sql.expression import SelectOfScalar
 from app.db.conn import get_db
 from app.middlewares.send_message import get_async_message_sender_on_loop
@@ -178,7 +178,12 @@ async def create_user(
                     enterprise=enterprise,
                 )
 
-                await send_message(UserCreateEvent(data=user_read).model_dump_json())
+                await send_message(
+                    UserCreateEvent(
+                        data=user_read, 
+                        event_scope=user_read.scope.name
+                    ).model_dump_json()
+                )
 
                 return UserResponse(
                     status=201,
@@ -285,8 +290,12 @@ async def update_current_user(
 
                 await send_message(
                     UserUpdateEvent(
+                        event_scope=user_read.scope.name,
+                        update_scope=user_read.scope.name,
+                        user=user_read,
                         data=UserUpdateWithId(
                             id=user_read.id,
+                            enterprise_id=user_read.enterprise.id,
                             **UserUpdate(**user_read.model_dump()).model_dump(
                                 exclude_none=True
                             ),
@@ -323,7 +332,12 @@ async def get_user(
         raise HTTPException(status_code=403, detail="Unauthorized user")
 
     with db_session as session:
-        user = session.get(User, user_id)
+        user = session.exec(
+            select(User)
+                .where(col(User.id) == user_id)
+                .where(col(User.enterprise_id) == identified_user.enterprise_id)
+        ).first()
+
         if user is None:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -537,6 +551,8 @@ async def update_user(
         raise HTTPException(status_code=403, detail="Unauthorized user")
 
     with db_session as session:
+        old_scope: Scope | None = None
+
         if user.role_id:
             role = session.get(Role, user.role_id)
             if role is None:
@@ -563,7 +579,11 @@ async def update_user(
             if scope is None:
                 raise HTTPException(status_code=404, detail="Scope not found")
 
-        db_user: User | None = session.get(User, user_id)
+        db_user: User | None = session.exec(
+            select(User)
+                .where(User.id == user_id)
+                .where(User.enterprise_id == identified_user.enterprise_id)
+            ).first()
 
         if db_user is None:
             raise HTTPException(status_code=404, detail="User not found")
@@ -591,6 +611,7 @@ async def update_user(
             db_user.role = role
 
         if scope:
+            old_scope = db_user.scope
             db_user.scope_id = scope.id
             db_user.scope = scope
 
@@ -628,8 +649,14 @@ async def update_user(
 
             await send_message(
                 UserUpdateEvent(
+                    event_scope=(
+                        user_read.scope.name if old_scope is None else old_scope.name
+                    ),
+                    update_scope=user_read.scope.name,
+                    user=user_read,
                     data=UserUpdateWithId(
                         id=user_read.id,
+                        enterprise_id=user_read.enterprise.id,
                         **UserUpdate(
                             **user_read.model_dump(exclude_none=True)
                         ).model_dump(),
@@ -667,7 +694,12 @@ async def delete_user(
         raise HTTPException(status_code=403, detail="Unauthorized user")
 
     with db_session as session:
-        db_user = session.get(User, user_id)
+        db_user: User | None = session.exec(
+            select(User)
+                .where(User.id == user_id)
+                .where(User.enterprise_id == identified_user.enterprise_id)
+            ).first()
+
 
         if db_user is None:
             raise HTTPException(status_code=404, detail="User not found")
@@ -689,6 +721,7 @@ async def delete_user(
 
         await send_message(
             UserDeleteEvent(
+                event_scope=db_user.scope.name,
                 data=UserDeleteWithId(
                     id=user_id, enterprise_id=identified_user.enterprise_id
                 )
