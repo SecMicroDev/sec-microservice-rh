@@ -19,13 +19,13 @@ def run_sender(sender: SyncSender, message):
 async def send_async_message_loop(message: str) -> None:
     print("Creating task...")
     loop = asyncio.get_event_loop()
-    sender = AsyncSender(queue_name="external/rh_event_queue")
+    sender = AsyncSender(queue_name="rh_event.#")
     task = loop.create_task(sender.publish(message, loop))
     await task
 
 
 def send_async_message(message: str) -> None:
-    sender = SyncSender(queue_name="rh_event_queue")
+    sender = SyncSender(queue_name="rh_event.#")
     threading.Thread(target=run_sender, args=(sender, message)).start()
 
 

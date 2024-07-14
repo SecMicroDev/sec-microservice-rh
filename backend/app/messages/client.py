@@ -1,8 +1,12 @@
 from asyncio import AbstractEventLoop
+from datetime import datetime as dt, timedelta, timezone
+from json.decoder import JSONDecodeError
 from os import environ
+from typing import Any
 import aio_pika
-from aio_pika import Message, DeliveryMode
+from aio_pika import ExchangeType, Message, DeliveryMode
 import pika
+import json
 
 
 class SyncSender:
@@ -48,6 +52,18 @@ class AsyncSender:
         print("Returning channel...")
 
         channel = await connection.channel()
+        body: dict[str, Any] = {}
+         
+        try:
+            body = json.loads(message_body)
+            body.update(dict(origin="rh"))
+            body.update(dict(start_date=dt.now(
+                tz=timezone(timedelta(0), name='UTC')).isoformat()
+            ))
+            message_body = json.dumps(body)
+        except JSONDecodeError | KeyError:
+            print("Invalid JSON message")
+            return connection
 
         message = Message(
             message_body.encode("ascii"),
@@ -57,10 +73,16 @@ class AsyncSender:
         exchange = await channel.declare_exchange(
             environ.get("DEFAULT_EXCHANGE", "openferp"),
             durable=bool(environ.get("EXCHANGE_DURABLE", "True")),
+            type=ExchangeType.TOPIC
         )
 
         print("publishing to queue")
-        await exchange.publish(routing_key=self.queue_name, message=message)
+        async def publish_to(route: str):
+            await exchange.publish(routing_key=f'rh_event.{route}', message=message)
+            print(f"Published on Exchange {exchange.name}, {exchange.__str__()}")
+
+        for route in ['sells', 'pt']:
+            await publish_to(route)
 
         # print(" [*] Waiting for messages. To exit press CTRL+C")
         # await asyncio.Future()  # Run forever
