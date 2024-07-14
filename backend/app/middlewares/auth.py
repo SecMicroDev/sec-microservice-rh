@@ -31,9 +31,15 @@ def authenticate_user(token: Annotated[str, Depends(oauth2_scheme)]) -> UserRead
     )
     try:
         payload = decode_jwt_token(token)
-        user: dict[str, Any] = payload.get("sub")
-        if user is None:
+
+        if payload is None or payload.get('sub') is None:
             raise credentials_exception
+
+        user: dict[str, Any] = payload.get("sub", {})
+
+        if user is None or len(user) <= 0:
+            raise credentials_exception
+
         print(user)
         token_data = UserRead(**user)
 
@@ -72,13 +78,12 @@ def authorize_user(
     )
 
     if (
-        user.role.hierarchy != 1 and user.role.hierarchy >= operation_hierarchy_order
+        user.role.hierarchy != 1 and user.role.hierarchy > operation_hierarchy_order
     ) or (
         user.scope.name != DefaultScope.ALL.value
         and user.scope.name not in operation_scopes
     ):
 
-        print("Raising exception...")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User does not have permission to access this resource",
