@@ -12,7 +12,7 @@ spec:
   - host: local.adrianlopes-swe.com.br
     http:
       paths:
-      - path: /api/v1(/|$)(.*)
+      - path: /api/v1/rh(/|$)(.*)
         pathType: ImplementationSpecific
         backend:
           service:
