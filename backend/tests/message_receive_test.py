@@ -1,16 +1,12 @@
 from collections.abc import Generator
 import datetime
 import json
-from typing import Any
 from unittest.mock import Mock, patch
 
-from pytest import fixture
 import pytest
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import sessionmaker
-from app.db.conn import get_db
 from app.messages.event import UpdateEvent
-from app.models.enterprise import BaseEnterprise, Enterprise
+from app.models.enterprise import Enterprise
 from app.models.user import User
 from sqlmodel import SQLModel, Session, StaticPool, create_engine, select
 
@@ -74,7 +70,7 @@ def test_update_enterprise_event(mock_get: Mock, setup_db: Engine):
     # Act
     UpdateEvent.process_message(message)
 
-    assert mock_get.called_once()
+    mock_get.assert_called()
 
     # Assert
     new_session = Session(autocommit=False, autoflush=False, bind=setup_db)
@@ -151,7 +147,7 @@ def test_update_user_event(mock_get: Mock, setup_db: Engine):
     # Act
     UpdateEvent.process_message(message)
 
-    assert mock_get.called_once()
+    mock_get.assert_called_once()
 
     # Assert
     new_session = Session(autocommit=False, autoflush=False, bind=setup_db)

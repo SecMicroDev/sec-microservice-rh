@@ -5,9 +5,15 @@ Create, sign and verify JWT Tokens
 from datetime import datetime, timedelta
 from typing import Any, Union
 from fastapi import HTTPException, status
-from jose import jwt
-from jose.exceptions import JWKError, JWSSignatureError, JWTClaimsError
-from app.auth.settings import ACCESS_TOKEN_EXPIRE_MINUTES, JWT_SECRET_ENCODE_KEY, JWT_SECRET_DECODE_KEY, ALGORITHM
+import jwt
+from jwt.exceptions import MissingRequiredClaimError
+
+from app.auth.settings import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    JWT_SECRET_ENCODE_KEY,
+    JWT_SECRET_DECODE_KEY,
+    ALGORITHM,
+)
 
 import json
 
@@ -65,6 +71,9 @@ def decode_jwt_token(
         issuer=DEFAULT_OPTIONS["iss"],
     )
 
+    if decoded_claims is None:
+        raise JWTValidationError()
+
     print("Claims: ", str(decoded_claims))
     print("Sub: ", str(decoded_claims["sub"]))
 
@@ -73,7 +82,7 @@ def decode_jwt_token(
     if abs(
         (datetime.fromtimestamp(decoded_claims["exp"]) - datetime.now())
     ) <= timedelta(0):
-        raise JWTClaimsError("Invalid exp time")
+        raise MissingRequiredClaimError("Invalid exp time")
 
     return decoded_claims
 

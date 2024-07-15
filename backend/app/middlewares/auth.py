@@ -1,8 +1,8 @@
 from typing import Annotated, Any
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError
-from app.auth.jwt_utils import JWTValidationError, create_jwt_token, decode_jwt_token
+from jwt import PyJWTError
+from app.auth.jwt_utils import JWTValidationError, decode_jwt_token
 from app.models.user import UserRead
 from app.models.scope import DefaultScope
 
@@ -32,7 +32,7 @@ def authenticate_user(token: Annotated[str, Depends(oauth2_scheme)]) -> UserRead
     try:
         payload = decode_jwt_token(token)
 
-        if payload is None or payload.get('sub') is None:
+        if payload is None or payload.get("sub") is None:
             raise credentials_exception
 
         user: dict[str, Any] = payload.get("sub", {})
@@ -44,7 +44,7 @@ def authenticate_user(token: Annotated[str, Depends(oauth2_scheme)]) -> UserRead
         token_data = UserRead(**user)
 
         return token_data
-    except JWTError as ex:
+    except PyJWTError as ex:
         raise credentials_exception from ex
     except JWTValidationError as ex:
         raise credentials_exception from ex

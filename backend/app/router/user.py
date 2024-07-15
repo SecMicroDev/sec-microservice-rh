@@ -180,8 +180,7 @@ async def create_user(
 
                 await send_message(
                     UserCreateEvent(
-                        data=user_read, 
-                        event_scope=user_read.scope.name
+                        data=user_read, event_scope=user_read.scope.name
                     ).model_dump_json()
                 )
 
@@ -299,7 +298,7 @@ async def update_current_user(
                             **UserUpdate(**user_read.model_dump()).model_dump(
                                 exclude_none=True
                             ),
-                        )
+                        ),
                     ).model_dump_json()
                 )
 
@@ -334,8 +333,8 @@ async def get_user(
     with db_session as session:
         user = session.exec(
             select(User)
-                .where(col(User.id) == user_id)
-                .where(col(User.enterprise_id) == identified_user.enterprise_id)
+            .where(col(User.id) == user_id)
+            .where(col(User.enterprise_id) == identified_user.enterprise_id)
         ).first()
 
         if user is None:
@@ -581,9 +580,9 @@ async def update_user(
 
         db_user: User | None = session.exec(
             select(User)
-                .where(User.id == user_id)
-                .where(User.enterprise_id == identified_user.enterprise_id)
-            ).first()
+            .where(User.id == user_id)
+            .where(User.enterprise_id == identified_user.enterprise_id)
+        ).first()
 
         if db_user is None:
             raise HTTPException(status_code=404, detail="User not found")
@@ -660,7 +659,7 @@ async def update_user(
                         **UserUpdate(
                             **user_read.model_dump(exclude_none=True)
                         ).model_dump(),
-                    )
+                    ),
                 ).model_dump_json()
             )
 
@@ -696,10 +695,9 @@ async def delete_user(
     with db_session as session:
         db_user: User | None = session.exec(
             select(User)
-                .where(User.id == user_id)
-                .where(User.enterprise_id == identified_user.enterprise_id)
-            ).first()
-
+            .where(User.id == user_id)
+            .where(User.enterprise_id == identified_user.enterprise_id)
+        ).first()
 
         if db_user is None:
             raise HTTPException(status_code=404, detail="User not found")
@@ -724,7 +722,7 @@ async def delete_user(
                 event_scope=db_user.scope.name,
                 data=UserDeleteWithId(
                     id=user_id, enterprise_id=identified_user.enterprise_id
-                )
+                ),
             ).model_dump_json()
         )
 

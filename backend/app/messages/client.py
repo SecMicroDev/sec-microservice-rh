@@ -53,13 +53,15 @@ class AsyncSender:
 
         channel = await connection.channel()
         body: dict[str, Any] = {}
-         
+
         try:
             body = json.loads(message_body)
             body.update(dict(origin="rh"))
-            body.update(dict(start_date=dt.now(
-                tz=timezone(timedelta(0), name='UTC')).isoformat()
-            ))
+            body.update(
+                dict(
+                    start_date=dt.now(tz=timezone(timedelta(0), name="UTC")).isoformat()
+                )
+            )
             message_body = json.dumps(body)
         except JSONDecodeError | KeyError:
             print("Invalid JSON message")
@@ -73,15 +75,16 @@ class AsyncSender:
         exchange = await channel.declare_exchange(
             environ.get("DEFAULT_EXCHANGE", "openferp"),
             durable=bool(environ.get("EXCHANGE_DURABLE", "True")),
-            type=ExchangeType.TOPIC
+            type=ExchangeType.TOPIC,
         )
 
         print("publishing to queue")
+
         async def publish_to(route: str):
-            await exchange.publish(routing_key=f'rh_event.{route}', message=message)
+            await exchange.publish(routing_key=f"rh_event.{route}", message=message)
             print(f"Published on Exchange {exchange.name}, {exchange.__str__()}")
 
-        for route in ['sells', 'pt']:
+        for route in ["sells", "pt"]:
             await publish_to(route)
 
         # print(" [*] Waiting for messages. To exit press CTRL+C")

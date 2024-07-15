@@ -231,7 +231,7 @@ def test_update_enterprise(mock_publish: Mock, test_client_auth_default_with_bro
 
     enterprise = EnterpriseUpdateWithId(**response.json()["data"])
     enterprise_dict = json.loads(enterprise.model_dump_json())
-    print('Enterprise dict: ', enterprise_dict)
+    print("Enterprise dict: ", enterprise_dict)
 
     mock_publish.assert_called_once()
 
@@ -244,7 +244,7 @@ def test_update_enterprise(mock_publish: Mock, test_client_auth_default_with_bro
                 def compare_val(k, v):
                     return v == enterprise_dict[k] if k in enterprise_dict else False
 
-                print('x_dict: ', x_dict)
+                print("x_dict: ", x_dict)
 
                 return all(
                     [
@@ -259,10 +259,10 @@ def test_update_enterprise(mock_publish: Mock, test_client_auth_default_with_bro
 
             return False
         except json.JSONDecodeError as e:
-            print('JSON error: ', e.__str__(), e.msg)
+            print("JSON error: ", e.__str__(), e.msg)
             return False
 
-    print('mock_publish.call_args.args: ', mock_publish.call_args.args[0])
+    print("mock_publish.call_args.args: ", mock_publish.call_args.args[0])
 
     assert compare_dict(mock_publish.call_args.args[0])
 

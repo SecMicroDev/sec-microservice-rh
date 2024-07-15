@@ -1,6 +1,5 @@
 import pytest
-from jose import JWTError
-from jose.exceptions import JWSSignatureError
+from jwt.exceptions import InvalidSignatureError
 from fastapi import HTTPException
 from unittest.mock import patch
 
@@ -62,7 +61,7 @@ def test_authenticate_user_expired_token():
 
 def test_authenticate_user_invalid_signature():
     with patch("app.auth.jwt_utils.decode_jwt_token") as mock_decode:
-        mock_decode.side_effect = JWSSignatureError("Invalid signature")
+        mock_decode.side_effect = InvalidSignatureError("Invalid signature")
         with pytest.raises(HTTPException) as exc_info:
             authenticate_user("invalid_signature_token")
         assert exc_info.value.status_code == 401
