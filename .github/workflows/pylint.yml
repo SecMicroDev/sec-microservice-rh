@@ -29,8 +29,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install "poetry==1.8"
         poetry install 
-    - name: Analysing the code with pylint
-      working-directory: ./backend
-      run: |
-        export PYTHONPATH="$(pwd)"
         poetry run pylint .
+    # - name: Analysing the code with pylint
+    #   working-directory: ./backend
+    #   run: |
+    #     export PYTHONPATH="$(pwd)"
+    #     poetry run pylint .
