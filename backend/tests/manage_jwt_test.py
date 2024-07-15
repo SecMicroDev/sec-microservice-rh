@@ -43,7 +43,7 @@ def test_correct_jwt_creation():
     }
 
     hashed = create_jwt_token(val, expire_min, config)
-    claims_resp = jwt.decode(hashed, options={ "verify_signature": False })
+    claims_resp = jwt.decode(hashed, options={"verify_signature": False})
 
     assert all([k in claims_resp for k in ["exp", "iss", "iat", "sub"]])
 
@@ -56,7 +56,9 @@ def test_correct_jwt_creation():
         for j, v in [(k, decoded.get(k, json.loads(decoded["sub"])[k])) for k in val]
     }.__eq__(val)
 
-    assert (jwt.decode(hashed, options={ "verify_signature": False })["exp"] - valid_time) <= 2
+    assert (
+        jwt.decode(hashed, options={"verify_signature": False})["exp"] - valid_time
+    ) <= 2
 
     for k in DEFAULT_OPTIONS:
         assert claims_resp[k] == default_options[k]
@@ -81,7 +83,7 @@ def test_correct_jwt_creation_with_defaults():
     }
 
     hashed = create_jwt_token(val, expire_min)
-    claims_resp = jwt.decode(hashed, options={ "verify_signature": False })
+    claims_resp = jwt.decode(hashed, options={"verify_signature": False})
 
     assert all([k in claims_resp for k in ["exp", "iss", "iat", "sub"]])
 
@@ -94,7 +96,9 @@ def test_correct_jwt_creation_with_defaults():
         for j, v in [(k, decoded.get(k, json.loads(decoded["sub"])[k])) for k in val]
     }.__eq__(val)
 
-    assert (jwt.decode(hashed, options={ "verify_signature": False })["exp"] - valid_time) <= 2
+    assert (
+        jwt.decode(hashed, options={"verify_signature": False})["exp"] - valid_time
+    ) <= 2
 
     for k in DEFAULT_OPTIONS:
         assert claims_resp[k] == default_options[k]
