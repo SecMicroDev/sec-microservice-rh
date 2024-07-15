@@ -86,7 +86,7 @@ def test_correct_jwt_creation_with_defaults():
 
     valid_time = (datetime.now() + timedelta(minutes=expire_min)).timestamp()
 
-    decoded = jwt.decode(hashed, st.JWT_SECRET_KEY, algorithms=st.ALGORITHM)
+    decoded = jwt.decode(hashed, st.JWT_SECRET_DECODE_KEY, algorithms=st.ALGORITHM)
 
     assert {
         j: v
@@ -142,7 +142,7 @@ def test_expire_raises_exception():
             "sub": str(val).replace("'", '"'),
             **DEFAULT_OPTIONS,
         },
-        st.JWT_SECRET_KEY,
+        st.JWT_SECRET_ENCODE_KEY,
         st.ALGORITHM,
     )
 

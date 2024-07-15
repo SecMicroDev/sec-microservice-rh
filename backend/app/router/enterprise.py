@@ -310,7 +310,7 @@ async def update_enterprise(
                         id=db_enterprise.id,
                         **enterprise.model_dump(exclude_unset=True, exclude_none=True),
                     )
-                ).model_dump_json()
+                ).model_dump_json(exclude_unset=True, exclude_none=True)
             )
 
             return EnterpriseResponse(
