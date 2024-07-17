@@ -1,13 +1,14 @@
-import pytest
-from jwt.exceptions import InvalidSignatureError
-from fastapi import HTTPException
 from unittest.mock import patch
 
+from fastapi import HTTPException
+from jwt.exceptions import InvalidSignatureError
+import pytest
+
 from app.auth.jwt_utils import create_jwt_token
-from app.models.user import UserRead
-from app.models.scope import DefaultScope, DefaultScopeSchema, ScopeRelation
-from app.models.role import DefaultRole, DefaultRoleSchema, RoleRelation
 from app.middlewares.auth import authenticate_user, authorize_user
+from app.models.role import DefaultRole, DefaultRoleSchema, RoleRelation
+from app.models.scope import DefaultScope, DefaultScopeSchema, ScopeRelation
+from app.models.user import UserRead
 
 
 def get_user_data():

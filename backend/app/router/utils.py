@@ -1,10 +1,8 @@
 from enum import Enum
+
 from sqlmodel import SQLModel
-from app.models.enterprise import (
-    EnterpriseRelation,
-    EnterpriseUpdate,
-    EnterpriseWithHierarchy,
-)
+
+from app.models.enterprise import EnterpriseUpdate, EnterpriseWithHierarchy
 from app.models.scope import DefaultScope
 from app.models.user import UserRead, UserUpdate
 

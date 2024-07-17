@@ -1,20 +1,19 @@
 """  User model package """
 
-from typing import Optional, Tuple
 from datetime import datetime as dt, timezone
+from typing import Optional, Tuple
+
 from pydantic import EmailStr
 from sqlalchemy import String, UniqueConstraint
-from sqlmodel import Field, Relationship, SQLModel, Column, col, select, and_
+from sqlmodel import Column, Field, Relationship, SQLModel, and_, col, select
 from sqlmodel.sql.expression import Select, SelectOfScalar
 
-from app.models.enterprise import Enterprise, EnterpriseRelation
 from app.db.base import BaseIDModel
-
-from app.models.role import Role
-from app.models.scope import Scope
 from app.models.api_response import APIResponse
-
+from app.models.enterprise import Enterprise, EnterpriseRelation
+from app.models.role import Role
 from app.models.role import RoleRelation
+from app.models.scope import Scope
 from app.models.scope import ScopeRelation
 
 
@@ -34,8 +33,15 @@ class BaseUser(SQLModel):
     )
 
     def query_scopes_roles(
-        self, roles_ids: list[int] = [], scopes_ids: list[int] = []
+        self, roles_ids: list[int] | None = None, scopes_ids: list[int] | None = None
     ) -> Select[Tuple[Enterprise, Scope, Role]]:
+
+        if roles_ids is None:
+            roles_ids = []
+
+        if scopes_ids is None:
+            scopes_ids = []
+
         query = select(Enterprise, Scope, Role).where(
             Enterprise.id == self.enterprise_id
         )

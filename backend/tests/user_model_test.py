@@ -1,4 +1,5 @@
 from typing import Any, Literal, Union
+
 import pytest
 from sqlmodel import Session, select
 
@@ -60,6 +61,8 @@ def populate_data(db_session: Session) -> dict[str, Any]:
 
 @pytest.fixture(scope="function")
 def create_default_user(db_session: Session, populate_data: dict[str, Any]):
+    # pylint: disable=redefined-outer-name
+
     user = User(
         username="testuser",
         email="test@example.com",
@@ -81,6 +84,8 @@ def test_create_user(
     db_session: Session,
     populate_data: Union[dict[Literal["enterprise"], Enterprise], dict[str, Any]],
 ):
+    # pylint: disable=redefined-outer-name
+
     # Test creating a user
     user = User(
         username="testuser",
@@ -107,6 +112,8 @@ def test_create_user(
 
 
 def test_read_user(create_default_user: dict[str, Any], db_session: Session):
+    # pylint: disable=redefined-outer-name
+
     # Test reading a user
     result = db_session.exec(
         select(User).where(User.username == create_default_user["user"].username)
@@ -120,6 +127,8 @@ def test_read_user(create_default_user: dict[str, Any], db_session: Session):
 
 
 def test_update_user(create_default_user: dict[str, Any], db_session: Session):
+    # pylint: disable=redefined-outer-name
+
     # Test updating a user
     user = create_default_user["user"]
 
@@ -136,6 +145,8 @@ def test_update_user(create_default_user: dict[str, Any], db_session: Session):
 
 
 def test_delete_user(populate_data: dict[str, Any], db_session: Session):
+    # pylint: disable=redefined-outer-name
+
     # Test deleting a user
     user = User(
         username="testuser",
@@ -163,6 +174,8 @@ def test_delete_user(populate_data: dict[str, Any], db_session: Session):
 def test_query_scope_role_by_id(
     create_default_user: dict[str, Any], db_session: Session
 ):
+    # pylint: disable=redefined-outer-name
+
     # Test querying a user by role and scope id
     with db_session as session:
 

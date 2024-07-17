@@ -1,15 +1,16 @@
+import base64
 from datetime import datetime, timedelta
+import json
+
 import jwt
 from jwt import ExpiredSignatureError
-import app.auth.settings as st
-from app.auth.jwt_utils import DEFAULT_OPTIONS, create_jwt_token, decode_jwt_token
-
-import base64
-import json
 import pytest
 
+from app.auth.jwt_utils import DEFAULT_OPTIONS, create_jwt_token, decode_jwt_token
+import app.auth.settings as st
 
-DEFAULT_DOMAIN_KEYS = ["user", "role" "id"]
+
+DEFAULT_DOMAIN_KEYS = ["user", "role", "id"]
 DEFAULT_JWT_KEYS = ["exp", "iss", "iat", "sub"]
 
 
@@ -45,16 +46,13 @@ def test_correct_jwt_creation():
     hashed = create_jwt_token(val, expire_min, config)
     claims_resp = jwt.decode(hashed, options={"verify_signature": False})
 
-    assert all([k in claims_resp for k in ["exp", "iss", "iat", "sub"]])
+    assert all(k in claims_resp for k in ["exp", "iss", "iat", "sub"])
 
     valid_time = (datetime.now() + timedelta(minutes=expire_min)).timestamp()
 
     decoded = jwt.decode(hashed, config["JWT_KEY"], algorithms=[config["JWT_ALGO"]])
 
-    assert {
-        j: v
-        for j, v in [(k, decoded.get(k, json.loads(decoded["sub"])[k])) for k in val]
-    }.__eq__(val)
+    assert {k: decoded.get(k, json.loads(decoded["sub"])[k]) for k in val} == val
 
     assert (
         jwt.decode(hashed, options={"verify_signature": False})["exp"] - valid_time
@@ -63,11 +61,11 @@ def test_correct_jwt_creation():
     for k in DEFAULT_OPTIONS:
         assert claims_resp[k] == default_options[k]
 
-    for k in val:
+    for k, v in val.items():
         if k in claims_resp:
-            assert claims_resp[k] == val[k]
+            assert claims_resp[k] == v
         else:
-            assert json.loads(claims_resp["sub"])[k] == val[k]
+            assert json.loads(claims_resp["sub"])[k] == v
 
 
 def test_correct_jwt_creation_with_defaults():
@@ -85,16 +83,13 @@ def test_correct_jwt_creation_with_defaults():
     hashed = create_jwt_token(val, expire_min)
     claims_resp = jwt.decode(hashed, options={"verify_signature": False})
 
-    assert all([k in claims_resp for k in ["exp", "iss", "iat", "sub"]])
+    assert all(k in claims_resp for k in ["exp", "iss", "iat", "sub"])
 
     valid_time = (datetime.now() + timedelta(minutes=expire_min)).timestamp()
 
     decoded = jwt.decode(hashed, st.JWT_SECRET_DECODE_KEY, algorithms=[st.ALGORITHM])
 
-    assert {
-        j: v
-        for j, v in [(k, decoded.get(k, json.loads(decoded["sub"])[k])) for k in val]
-    }.__eq__(val)
+    assert {k: decoded.get(k, json.loads(decoded["sub"])[k]) for k in val} == val
 
     assert (
         jwt.decode(hashed, options={"verify_signature": False})["exp"] - valid_time
@@ -103,11 +98,11 @@ def test_correct_jwt_creation_with_defaults():
     for k in DEFAULT_OPTIONS:
         assert claims_resp[k] == default_options[k]
 
-    for k in val:
+    for k, v in val.items():
         if k in claims_resp:
-            assert claims_resp[k] == val[k]
+            assert claims_resp[k] == v
         else:
-            assert json.loads(claims_resp["sub"])[k] == val[k]
+            assert json.loads(claims_resp["sub"])[k] == v
 
 
 def test_correct_jwt_parsing():
@@ -124,15 +119,15 @@ def test_correct_jwt_parsing():
 
     decoded = decode_jwt_token(hashed)
 
-    assert decoded != None
+    assert decoded is not None
 
     for k in DEFAULT_OPTIONS:
         assert k in decoded
 
     assert (decoded["exp"] - valid_time.timestamp()) <= 2
 
-    for k in val.keys():
-        assert decoded["sub"][k] == val[k]
+    for k, v in val.items():
+        assert decoded["sub"][k] == v
 
 
 def test_expire_raises_exception():
@@ -153,5 +148,5 @@ def test_expire_raises_exception():
 
     with pytest.raises(ExpiredSignatureError) as error_context:
         decode_jwt_token(hashed)
-        assert error_context != None
+        assert error_context is not None
         print(error_context)

@@ -5,25 +5,16 @@ from unittest.mock import Mock, patch
 
 import pytest
 from sqlalchemy.engine import Engine
+from sqlmodel import SQLModel, Session, select
+
 from app.messages.event import UpdateEvent
 from app.models.enterprise import Enterprise
 from app.models.user import User
-from sqlmodel import SQLModel, Session, StaticPool, create_engine, select
+from .conftest import engine
 
 
 @pytest.fixture(scope="function")
 def setup_db() -> Engine:
-    # SQLite database URL for testing
-    SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-
-    # Create a SQLAlchemy engine
-    engine = create_engine(
-        SQLALCHEMY_DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-
-    # Create tables in the database
     SQLModel.metadata.create_all(bind=engine)
     return engine
 
@@ -34,6 +25,8 @@ def gen_db(session: Session) -> Generator:
 
 @patch("app.messages.event.get_db")
 def test_update_enterprise_event(mock_get: Mock, setup_db: Engine):
+    # pylint: disable=redefined-outer-name,consider-using-dict-comprehension
+
     transaction = setup_db.connect()
     local_db_session = Session(autocommit=False, autoflush=False, bind=setup_db)
 
@@ -95,6 +88,8 @@ def test_update_enterprise_event(mock_get: Mock, setup_db: Engine):
 
 @patch("app.messages.event.get_db")
 def test_update_user_event(mock_get: Mock, setup_db: Engine):
+    # pylint: disable=redefined-outer-name,consider-using-dict-comprehension
+
     transaction = setup_db.connect()
     local_db_session = Session(autocommit=False, autoflush=False, bind=setup_db)
 

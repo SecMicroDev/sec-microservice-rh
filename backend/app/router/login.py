@@ -1,7 +1,8 @@
 import json
-from sqlmodel import SQLModel, Session, select
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlmodel import SQLModel, Session, select
 
 from app.auth.data_hash import validate_hashed_data
 from app.auth.jwt_utils import create_jwt_token

@@ -1,17 +1,17 @@
 """ Tests for the User route with client """
 
-import datetime
 from typing import Any
+
 from fastapi import status
 from fastapi.testclient import TestClient
-from sqlalchemy import select
 from sqlmodel import Session
 
-from app.models.user import User, UserRead
+from app.auth.data_hash import validate_hashed_data
+from app.models.enterprise import EnterpriseRelation
 from app.models.role import DefaultRole, Role, RoleRelation
 from app.models.scope import DefaultScope, Scope, ScopeRelation
-from app.models.enterprise import EnterpriseRelation
-from app.auth.data_hash import validate_hashed_data
+from app.models.user import User, UserRead
+
 from .conftest import get_test_client_authenticated
 
 
@@ -112,16 +112,23 @@ def test_create_user(
     # Validate database
     print(user)
     db = db_session
-    db_user: User = db.exec(select(User, User.id).where(User.id == user["id"])).first()
-    db_user, id = db_user
+    db_user_query = db.get(User, User.id)
+    db_user = db_user_query
 
     assert db_user is not None
-    assert id is not None
-    assert id == user["id"]
+
+    user_id = db_user.id
+
+    assert db_user is not None
+    assert user_id is not None
+    assert user_id == user["id"]
     assert db_user.username == user["username"]
+    assert db_user.enterprise is not None
     assert db_user.enterprise.id is not None
     assert db_user.enterprise.name == enterprise_role_scope["enterprise"].name
+    assert db_user.role is not None
     assert db_user.role.name == enterprise_role_scope["roles"][0].name
+    assert db_user.scope is not None
     assert db_user.scope.name == enterprise_role_scope["scopes"][0].name
 
     db.close()
@@ -261,6 +268,8 @@ def test_get_all_users(
     create_default_user: dict[str, Any],
     db_session: Session,
 ):
+    # pylint: disable=unused-argument
+
     """All users should be retrieved"""
 
     test_client = test_client_authenticated_default

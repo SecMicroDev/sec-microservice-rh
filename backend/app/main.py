@@ -38,7 +38,9 @@ external_update_listener = AsyncListener(
 
 
 @asynccontextmanager
-async def listener_span(app: FastAPI, *args, **kwargs):
+async def listener_span(fapi_app: FastAPI, *args, **kwargs):
+    # pylint: disable=unused-argument
+
     loop = asyncio.get_running_loop()
     task = loop.create_task(external_update_listener.listen(loop))
     yield

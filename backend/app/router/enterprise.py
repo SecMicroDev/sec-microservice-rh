@@ -1,8 +1,13 @@
 import json
 from typing import Any, Callable, Coroutine
+
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
+
 from app.auth.data_hash import get_hashed_data
+from app.db.conn import get_db
+from app.middlewares.auth import authenticate_user, authorize_user
+from app.middlewares.send_message import get_async_message_sender_on_loop
 from app.models.enterprise import (
     BaseEnterprise,
     Enterprise,
@@ -11,12 +16,9 @@ from app.models.enterprise import (
     EnterpriseUpdate,
     EnterpriseWithHierarchy,
 )
-from app.middlewares.auth import authenticate_user, authorize_user
-from app.db.conn import get_db
 from app.models.role import DefaultRole, DefaultRoleSchema, Role, RoleRelation
 from app.models.scope import DefaultScope, DefaultScopeSchema, Scope, ScopeRelation
 from app.models.user import FirstUserCreate, User, UserRead, UserResponse
-from app.middlewares.send_message import get_async_message_sender_on_loop
 from app.router.utils import (
     EnterpriseCreateEvent,
     EnterpriseDeleteEvent,
@@ -27,6 +29,66 @@ from app.router.utils import (
 )
 
 router = APIRouter(prefix="/enterprise", tags=["Enterprise"])
+
+
+def get_default_roles():
+    return DefaultRoleSchema.get_default_roles().values()
+
+
+def get_default_scopes():
+    return DefaultScopeSchema.get_default_scopes().values()
+
+
+def fill_roles_scopes(new_enterprise: Enterprise):
+    for roleschema in get_default_roles():
+        role = Role(**roleschema)
+        if new_enterprise.roles is not None:
+            new_enterprise.roles.append(role)
+        else:
+            new_enterprise.roles = [role]
+
+    for scopeschema in get_default_scopes():
+        scope = Scope(**scopeschema)
+        if new_enterprise.scopes is not None:
+            new_enterprise.scopes.append(scope)
+        else:
+            new_enterprise.scopes = [scope]
+
+    return new_enterprise
+
+
+def role_relation_from_enterprise(enterprise: Enterprise) -> list[RoleRelation]:
+    if enterprise.roles is None:
+        return []
+
+    return list(map(lambda r: RoleRelation(**r.model_dump()), enterprise.roles))
+
+
+def scope_relation_from_enterprise(enterprise: Enterprise) -> list[ScopeRelation]:
+    if enterprise.scopes is None:
+        return []
+    return list(map(lambda s: ScopeRelation(**s.model_dump()), enterprise.scopes))
+
+
+def get_filtered_roles(enterprise: Enterprise) -> Role | None:
+    filtered_roles = list(
+        filter(
+            lambda x: x.name == DefaultRole.COLLABORATOR.value,
+            (enterprise.roles if enterprise.roles is not None else []),
+        )
+    )
+
+    return filtered_roles[0] if len(filtered_roles) > 0 else None
+
+
+def get_filtered_scopes(enterprise: Enterprise) -> Scope | None:
+    filtered_scopes = list(
+        filter(
+            lambda x: x.name == DefaultScope.ALL.value,
+            (enterprise.scopes if enterprise.scopes is not None else []),
+        )
+    )
+    return filtered_scopes[0] if len(filtered_scopes) > 0 else None
 
 
 @router.post("/signup", response_model=UserResponse)
@@ -50,59 +112,25 @@ async def create_enterprise(
     """
 
     with db_session as session:
-
-        default_roles = DefaultRoleSchema.get_default_roles()
-        default_scopes = DefaultScopeSchema.get_default_scopes()
-
         # Create the enterprise
         new_enterprise = Enterprise(**enterprise.model_dump())
+        new_enterprise = fill_roles_scopes(new_enterprise)
 
-        for roleschema in default_roles.values():
-            role = Role(**roleschema)
-            if new_enterprise.roles is not None:
-                new_enterprise.roles.append(role)
-            else:
-                new_enterprise.roles = [role]
+        default_role = get_filtered_roles(new_enterprise)
+        default_scope = get_filtered_scopes(new_enterprise)
 
-        for scopeschema in default_scopes.values():
-            scope = Scope(**scopeschema)
-            if new_enterprise.scopes is not None:
-                new_enterprise.scopes.append(scope)
-            else:
-                new_enterprise.scopes = [scope]
-
-        filtered_roles = list(
-            filter(
-                lambda x: x.name == DefaultRole.OWNER.value,
-                (new_enterprise.roles if new_enterprise.roles is not None else []),
-            )
-        )
-        filtered_scopes = list(
-            filter(
-                lambda x: x.name == DefaultScope.ALL.value,
-                (new_enterprise.scopes if new_enterprise.scopes is not None else []),
-            )
-        )
-
-        if len(filtered_roles) == 0 or len(filtered_scopes) == 0:
+        if default_role is None or default_scope is None:
             raise HTTPException(
                 status_code=500, detail="The default roles and scopes could not be set"
             )
 
-        default_role = filtered_roles[0] if len(filtered_roles) > 0 else []
-        default_scope = filtered_scopes[0] if len(filtered_scopes) > 0 else []
-
-        user_dict = user.model_dump()
-        password = user_dict.pop("password")
-        hashed_password = get_hashed_data(password)
-
         # Create the user
         new_user = User(
-            **user.model_dump(),
+            **user.model_dump(exclude=set("password")),
             # enterprise_id=new_enterprise.id,
             # role_id=default_role.id,
             # scope_id=default_scope.id,
-            hashed_password=hashed_password,
+            hashed_password=get_hashed_data(user.password),
         )
 
         new_user.enterprise = new_enterprise
@@ -122,40 +150,33 @@ async def create_enterprise(
             raise HTTPException(
                 status_code=500, detail="The enterprise could not be created"
             )
-        else:
-            user_read = UserRead(
-                **new_user.model_dump(),
-                enterprise=EnterpriseRelation(**new_user.enterprise.model_dump()),
-                role=RoleRelation(**new_user.role.model_dump()),
-                scope=ScopeRelation(**new_user.scope.model_dump()),
-            )
 
-            print(f"Signup User: {user_read.model_dump_json()}")
+        user_read = UserRead(
+            **new_user.model_dump(),
+            enterprise=EnterpriseRelation(**new_user.enterprise.model_dump()),
+            role=RoleRelation(**new_user.role.model_dump()),
+            scope=ScopeRelation(**new_user.scope.model_dump()),
+        )
 
-            roles = map(
-                lambda r: RoleRelation(**r.model_dump()), new_user.enterprise.roles
-            )
-            scopes = map(
-                lambda s: ScopeRelation(**s.model_dump()), new_user.enterprise.scopes
-            )
+        print(f"Signup User: {user_read.model_dump_json()}")
 
-            await send_message(
-                EnterpriseCreateEvent(
-                    data=EnterpriseWithHierarchy(
-                        roles=list(roles),
-                        scopes=list(scopes),
-                        **new_user.enterprise.model_dump(),
-                    )
-                ).model_dump_json()
-            )
+        await send_message(
+            EnterpriseCreateEvent(
+                data=EnterpriseWithHierarchy(
+                    roles=role_relation_from_enterprise(new_user.enterprise),
+                    scopes=scope_relation_from_enterprise(new_user.enterprise),
+                    **new_user.enterprise.model_dump(),
+                )
+            ).model_dump_json()
+        )
 
-            await send_message(UserCreateEvent(data=user_read).model_dump_json())
+        await send_message(UserCreateEvent(data=user_read).model_dump_json())
 
-            return UserResponse(
-                status=200,
-                message="Enterprise created",
-                data=user_read,
-            )
+        return UserResponse(
+            status=200,
+            message="Enterprise created",
+            data=user_read,
+        )
 
 
 @router.get("/", response_model=EnterpriseResponse)
@@ -173,7 +194,7 @@ def get_enterprise(
         EnterpriseResponse: The response containing the retrieved enterprise's information.
     """
 
-    if identified_user == None:
+    if identified_user is None:
         raise HTTPException(status_code=403, detail="Unauthorized user")
 
     with db_session as session:
@@ -219,19 +240,18 @@ def get_full_enterprise(
     with db_session as session:
         enterprise = session.get(Enterprise, identified_user.enterprise_id)
 
-        if enterprise is None or any(
-            (
-                enterprise.users is None,
-                enterprise.roles is None,
-                enterprise.scopes is None,
-            )
+        if (
+            enterprise is None
+            or enterprise.users is None
+            or enterprise.roles is None
+            or enterprise.scopes is None
         ):
             raise HTTPException(status_code=404, detail="Enterprise not found")
 
-        resp = dict(
-            status=200,
-            message="Enterprise retrieved",
-            data={
+        resp = {
+            "status": 200,
+            "message": "Enterprise retrieved",
+            "data": {
                 "users": list(
                     map(
                         lambda user: json.loads(user.model_dump_json()),
@@ -252,7 +272,7 @@ def get_full_enterprise(
                 ),
                 **enterprise.model_dump(),
             },
-        )
+        }
 
         print("Enterprise Full:", str(resp))
 
@@ -283,7 +303,7 @@ async def update_enterprise(
         EnterpriseResponse: The response containing the updated enterprise's information.
     """
 
-    if identified_user == None:
+    if identified_user is None:
         raise HTTPException(status_code=403, detail="Unauthorized user")
 
     authorize_user(
@@ -310,7 +330,7 @@ async def update_enterprise(
         session.commit()
         session.refresh(db_enterprise)
 
-        if not (db_enterprise.id is None):
+        if db_enterprise.id is not None:
             await send_message(
                 EnterpriseUpdateEvent(
                     data=EnterpriseUpdateWithId(
@@ -327,10 +347,10 @@ async def update_enterprise(
                     **db_enterprise.model_dump(),
                 ),
             )
-        else:
-            raise HTTPException(
-                status_code=500, detail="The enterprise could not be updated"
-            )
+
+        raise HTTPException(
+            status_code=500, detail="The enterprise could not be updated"
+        )
 
 
 @router.delete("/")
@@ -351,7 +371,7 @@ async def delete_enterprise(
         EnterpriseResponse: The response containing the confirmation message.
     """
 
-    if identified_user == None:
+    if identified_user is None:
         raise HTTPException(status_code=403, detail="Unauthorized user")
 
     authorize_user(
@@ -387,5 +407,5 @@ async def delete_enterprise(
         return Response(
             status_code=200,
             media_type="application/json",
-            content=json.dumps(dict(message="Enterprise deleted", status=200)),
+            content=json.dumps({"message": "Enterprise deleted", "status": 200}),
         )

@@ -47,17 +47,15 @@ def test_create_user(mock_publish: Mock, test_client_auth_default_with_broker):
                     return v == user_dict[k] if k in user_dict else False
 
                 return all(
-                    [
-                        compare_val(key, val) if key in user_dict.keys() else False
-                        for key, val in x_dict.items()
-                    ]
+                    compare_val(key, val) if key in user_dict.keys() else False
+                    for key, val in x_dict.items()
                 )
 
             return False
         except json.JSONDecodeError:
             return False
 
-    assert any(map(lambda x: compare_dict(x), mock_publish.call_args.args))
+    assert any(map(compare_dict, mock_publish.call_args.args))
     assert response.status_code == 201
 
 
@@ -90,10 +88,8 @@ def test_update_current_user(mock_publish: Mock, test_client_auth_default_with_b
                     return v == user_dict[k] if k in user_dict else False
 
                 return all(
-                    [
-                        compare_val(key, val) if key in user_dict.keys() else False
-                        for key, val in x_dict.items()
-                    ]
+                    compare_val(key, val) if key in user_dict.keys() else False
+                    for key, val in x_dict.items()
                 )
 
             return False
@@ -101,7 +97,7 @@ def test_update_current_user(mock_publish: Mock, test_client_auth_default_with_b
             return False
 
     assert response.status_code == 200
-    assert any(map(lambda x: compare_dict(x), mock_publish.call_args.args))
+    assert any(map(compare_dict, mock_publish.call_args.args))
 
 
 @patch.object(AsyncSender, "publish")
@@ -136,17 +132,15 @@ def test_update_user(mock_publish: Mock, test_client_auth_default_with_broker):
                     return v == user_dict[k] if k in user_dict else False
 
                 return all(
-                    [
-                        compare_val(key, val) if key in user_dict.keys() else False
-                        for key, val in x_dict.items()
-                    ]
+                    compare_val(key, val) if key in user_dict.keys() else False
+                    for key, val in x_dict.items()
                 )
 
             return False
         except json.JSONDecodeError:
             return False
 
-    assert any(map(lambda x: compare_dict(x), mock_publish.call_args.args))
+    assert any(map(compare_dict, mock_publish.call_args.args))
 
 
 @patch.object(AsyncSender, "publish")
@@ -172,7 +166,7 @@ def test_delete_user(mock_publish: Mock, test_client_auth_default_with_broker):
         except json.JSONDecodeError:
             return False
 
-    assert any(map(lambda x: compare_dict(x), mock_publish.call_args.args))
+    assert any(map(compare_dict, mock_publish.call_args.args))
 
 
 @patch.object(AsyncSender, "publish")
@@ -212,7 +206,7 @@ def test_create_enterprise(mock_publish: Mock, test_client_auth_default_with_bro
         except json.JSONDecodeError:
             return False
 
-    assert any(map(lambda x: compare_dict(x), mock_publish.call_args.args))
+    assert any(map(compare_dict, mock_publish.call_args.args))
 
 
 @patch.object(AsyncSender, "publish")
@@ -231,7 +225,6 @@ def test_update_enterprise(mock_publish: Mock, test_client_auth_default_with_bro
 
     enterprise = EnterpriseUpdateWithId(**response.json()["data"])
     enterprise_dict = json.loads(enterprise.model_dump_json())
-    print("Enterprise dict: ", enterprise_dict)
 
     mock_publish.assert_called_once()
 
@@ -244,25 +237,15 @@ def test_update_enterprise(mock_publish: Mock, test_client_auth_default_with_bro
                 def compare_val(k, v):
                     return v == enterprise_dict[k] if k in enterprise_dict else False
 
-                print("x_dict: ", x_dict)
-
                 return all(
-                    [
-                        (
-                            compare_val(key, val)
-                            if key in enterprise_dict.keys()
-                            else False
-                        )
-                        for key, val in x_dict.items()
-                    ]
+                    (compare_val(key, val) if key in enterprise_dict.keys() else False)
+                    for key, val in x_dict.items()
                 )
 
             return False
-        except json.JSONDecodeError as e:
-            print("JSON error: ", e.__str__(), e.msg)
-            return False
 
-    print("mock_publish.call_args.args: ", mock_publish.call_args.args[0])
+        except json.JSONDecodeError:
+            return False
 
     assert compare_dict(mock_publish.call_args.args[0])
 
@@ -291,7 +274,8 @@ def test_delete_enterprise(
                 x_dict = all_info["data"]
                 return x_dict["id"] == enterprise.id
             return False
+
         except json.JSONDecodeError:
             return False
 
-    assert any(map(lambda x: compare_dict(x), mock_publish.call_args.args))
+    assert any(map(compare_dict, mock_publish.call_args.args))

@@ -4,12 +4,12 @@ from typing import Any
 
 from sqlmodel import Session
 
+from app.auth.data_hash import get_hashed_data
 from app.db.conn import get_db
 from app.models.enterprise import Enterprise, EnterpriseUpdate
-from app.models.user import User, UserUpdate
-from app.auth.data_hash import get_hashed_data
 from app.models.role import BaseRole, Role
 from app.models.scope import BaseScope, Scope
+from app.models.user import User
 
 
 class UpdateEvent:
@@ -51,6 +51,8 @@ class UpdateEvent:
             self.update_user()
 
     def update_enterprise(self):
+        # pylint: disable=broad-exception-caught
+
         db: Session | None = None
         print(f"Start enterprise update: Data -- {self.data}")
         try:
@@ -73,79 +75,95 @@ class UpdateEvent:
                 else:
                     print(f'Enterprise with id {self.data["id"]} not found')
         except Exception as e:
-            print("Messaging error: ", e.__str__())
+
+            print("Messaging error: ", str(e))
             if db:
                 db.rollback()
                 db.close()
 
+    def role_search(self, session: Session) -> Role | None:
+        if "role_id" in self.data:
+            return session.get(Role, self.data["role_id"])
+
+        if "role_name" in self.data:
+            return session.exec(
+                BaseRole.get_roles_by_names(
+                    self.data["enterprise_id"], [self.data["role_name"]]
+                )
+            ).first()
+
+        return None
+
+    def scope_search(self, session: Session) -> Scope | None:
+        if "scope_id" in self.data:
+            return session.get(Scope, self.data["scope_id"])
+
+        if "scope_name" in self.data:
+            return session.exec(
+                BaseScope.get_roles_by_names(
+                    self.data["enterprise_id"], [self.data["scope_name"]]
+                )
+            ).first()
+
+        return None
+
     def update_user(self):
+        # pylint: disable=broad-exception-caught
+
         db: Session | None = None
         role: Role | None = None
         scope: Scope | None = None
+
         print(f"Start User update: Data -- {self.data}")
+
         try:
-            if self.data["enterprise_id"] and self.data["user_id"]:
+            if self.data["enterprise_id"] is None or self.data["user_id"] is None:
+                print("Enterprise or user id not provided")
+                return
 
-                print("Parsed enterprise and user data...")
-                db = next(get_db())
+            print("Parsed enterprise and user data...")
+            db = next(get_db())
 
-                with db as session:
-                    print("Interacting with the database...")
+            with db as session:
+                print("Interacting with the database...")
 
-                    if self.data["role_id"]:
-                        role = session.get(Role, self.data["role_id"])
-                    elif "role_name" in self.data:
-                        role = session.exec(
-                            BaseRole.get_roles_by_names(
-                                self.data["enterprise_id"], [self.data["role_name"]]
-                            )
-                        ).first()
+                role = self.role_search(session)
+                scope = self.scope_search(session)
 
-                    if "scope_id" in self.data:
-                        scope = session.get(Scope, self.data["scope_id"])
-                    elif "scope_name" in self.data:
-                        scope = session.exec(
-                            BaseScope.get_roles_by_names(
-                                self.data["enterprise_id"], [self.data["scope_name"]]
-                            )
-                        ).first()
+                print("finding user...")
+                db_user = session.get(User, self.data["user_id"])
 
-                    print("finding user...")
-                    db_user = session.get(User, self.data["user_id"])
+                if db_user is None:
+                    print(f'User with id {self.data["user_id"]} not found')
+                    return
 
-                    if db_user:
+                if role:
+                    db_user.role_id = role.id
+                    db_user.role = role
 
-                        if role:
-                            db_user.role_id = role.id
-                            db_user.role = role
+                if scope is not None:
+                    db_user.scope_id = scope.id
+                    db_user.scope = scope
 
-                        if scope is not None:
-                            db_user.scope_id = scope.id
-                            db_user.scope = scope
+                if "password" in self.data:
+                    db_user.hashed_password = get_hashed_data(self.data["password"])
 
-                        if "password" in self.data:
-                            db_user.hashed_password = get_hashed_data(
-                                self.data["password"]
-                            )
+                if "username" in self.data:
+                    db_user.username = self.data["username"]
 
-                        if "username" in self.data:
-                            db_user.username = self.data["username"]
+                if "email" in self.data:
+                    db_user.email = self.data["email"]
 
-                        if "email" in self.data:
-                            db_user.email = self.data["email"]
+                if "full_name" in self.data:
+                    db_user.full_name = self.data["full_name"]
 
-                        if "full_name" in self.data:
-                            db_user.full_name = self.data["full_name"]
-
-                        print("Updating user...")
-                        session.add(db_user)
-                        session.commit()
-
-                    else:
-                        print(f'User with id {self.data["user_id"]} not found')
+                print("Updating user...")
+                session.add(db_user)
+                session.commit()
 
         except Exception as e:
-            print("Messaging Error :", e.__str__())
+            print("Messaging Error :", str(e))
+
             if db:
                 db.rollback()
                 db.close()

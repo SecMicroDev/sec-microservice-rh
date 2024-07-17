@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
-from app.main import app
-from app.models.enterprise import BaseEnterprise, EnterpriseRelation, EnterpriseUpdate
-from app.models.user import FirstUserCreate, UserCreate
+from app.models.enterprise import BaseEnterprise, EnterpriseUpdate
+from app.models.user import FirstUserCreate
 
 
 def test_create_enterprise(test_client_authenticated_default: TestClient):

@@ -1,16 +1,17 @@
 """Module for database setup and utilities using SQLModel and SQLAlchemy."""
 
-from sqlmodel import Session, create_engine, SQLModel
 import sqlalchemy as sa
-
+from sqlmodel import SQLModel, Session, create_engine
 
 from . import settings as st
 
 
-def setup_guids_postgresql(engine) -> None:
-    with Session(engine) as session:
-        session.exec('create EXTENSION if not EXISTS "pgcrypto"')
-        session.commit()
+SQLALCHEMY_DATABASE_URL = (
+    f"postgresql://{st.DB_USER}:{st.DB_PASSWORD}@{st.DB_HOST}:5432/{st.DB_NAME}"
+)
+
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 
 def create_db():
@@ -38,10 +39,4 @@ def get_db():
             session.close()
 
 
-SQLALCHEMY_DATABASE_URL = (
-    f"postgresql://{st.DB_USER}:{st.DB_PASSWORD}@{st.DB_HOST}:5432/{st.DB_NAME}"
-)
-
 GUID_SERVER_DEFAULT_PSQL = sa.DefaultClause(sa.text("gen_random_uuid()"))
-
-engine = create_engine(SQLALCHEMY_DATABASE_URL)

@@ -29,22 +29,20 @@ class Enterprise(BaseIDModel, BaseEnterprise, table=True):
     __tablename__ = "enterprise"
     users: Optional[list["User"]] = Relationship(
         back_populates="enterprise",
-        sa_relationship_kwargs=dict(cascade="all, delete-orphan"),
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
     scopes: Optional[list["Scope"]] = Relationship(
         back_populates="enterprise",
-        sa_relationship_kwargs=dict(cascade="all, delete-orphan"),
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
     roles: Optional[list["Role"]] = Relationship(
         back_populates="enterprise",
-        sa_relationship_kwargs=dict(cascade="all, delete-orphan"),
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
 
 
 class EnterpriseRelation(BaseIDModel, BaseEnterprise):
     """Represents an enterprise relation."""
-
-    pass
 
 
 class EnterpriseWithHierarchy(EnterpriseRelation):

@@ -7,11 +7,18 @@ This module contains endpoints for creating, retrieving, updating, and deleting 
 from collections.abc import Callable, Coroutine
 from datetime import datetime
 import json
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlmodel import Session, col, or_, and_, select
+from sqlmodel import Session, col, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
+
+from app.auth.data_hash import get_hashed_data
 from app.db.conn import get_db
+from app.middlewares.auth import authenticate_user, authorize_user
 from app.middlewares.send_message import get_async_message_sender_on_loop
+from app.models.enterprise import EnterpriseRelation
+from app.models.role import BaseRole, DefaultRole, Role, RoleRelation
+from app.models.scope import BaseScope, DefaultScope, Scope, ScopeRelation
 from app.models.user import (
     User,
     UserCreate,
@@ -21,11 +28,7 @@ from app.models.user import (
     UserUpdate,
     UserUpdateMe,
 )
-from app.auth.data_hash import get_hashed_data
-from app.models.role import BaseRole, DefaultRole, Role, RoleRelation
-from app.models.scope import BaseScope, DefaultScope, Scope, ScopeRelation
-from app.models.enterprise import EnterpriseRelation
-from app.middlewares.auth import authenticate_user, authorize_user
+
 from .utils import (
     UserCreateEvent,
     UserDeleteEvent,
@@ -38,10 +41,6 @@ from .utils import (
 router = APIRouter(prefix="/users")
 
 
-# def __create_event_message_resp(message: SQLModel) -> str:
-#     return message.model_dump_json(exclude_unset=True)
-
-
 def __retrieve_scope_role(
     user: UserCreate, identified_user: User, session: Session
 ) -> tuple[Scope | None, Role | None]:
@@ -49,7 +48,8 @@ def __retrieve_scope_role(
         return __query_scope_role_by_id(
             user.role_id, user.scope_id, identified_user, session
         )
-    elif user.scope_name and user.role_name:
+
+    if user.scope_name and user.role_name:
         return __query_scope_role_by_name(
             user.role_name, user.scope_name, identified_user, session
         )
@@ -95,10 +95,6 @@ def __query_scope_role_by_name(
     if res:
         _, scope, role = res
 
-    # if scope_full is not None and role_full is not None:
-    #     scope = ScopeRead(**scope_full.model_dump())
-    #     role = RoleRead(**role_full.model_dump())
-
     return scope, role
 
 
@@ -143,7 +139,7 @@ async def create_user(
             operation_scopes=[scope.name],
             operation_hierarchy_order=role.hierarchy,
         )
-        if not (authorized_user is None):
+        if authorized_user is not None:
             try:
                 user.scope_id = scope.id
                 user.role_id = role.id
@@ -212,14 +208,17 @@ async def get_current_user(
         UserResponse: The response containing the current user's information.
     """
 
-    if not (current_user is None):
-        return UserResponse(
-            status=200,
-            message="Current user retrieved",
-            data=current_user,
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found during authentication",
         )
-    else:
-        raise HTTPException(status_code=404, detail="User not found")
+
+    return UserResponse(
+        status=200,
+        message="Current user retrieved",
+        data=current_user,
+    )
 
 
 @router.put("/me", response_model=UserResponse)
@@ -243,7 +242,7 @@ async def update_current_user(
     """
     resp: UserResponse | None = None
 
-    if not (current_user is None):
+    if current_user is not None:
         with db_session as session:
             print("User identified for UPDATE: ", current_user.id)
 
@@ -285,7 +284,7 @@ async def update_current_user(
                 data=user_read,
             )
 
-            if any([k != "password" for k, _ in user.model_dump().items()]):
+            if any(k != "password" for k, _ in user.model_dump().items()):
 
                 await send_message(
                     UserUpdateEvent(
@@ -305,7 +304,11 @@ async def update_current_user(
             return resp
     else:
         print(
-            f'User not found None={current_user is None} ID={current_user.id if current_user.id is not None else ""}',
+            f'User not found None={
+                current_user is None
+                } ID={
+                    current_user.id if current_user.id is not None else ""
+                }',
             current_user,
         )
         raise HTTPException(status_code=404, detail="User not found")
@@ -367,12 +370,14 @@ async def get_all_users(
     scope_names: str | None = None,
     scope_ids: str | None = None,
     role_names: str | None = None,
-    role_ids: str | None = None,
     usernames: str | None = None,
+    role_ids: str | None = None,
     emails: str | None = None,
     db_session: Session = Depends(get_db),
     identified_user: UserRead = Depends(authenticate_user),
 ) -> UserListResponse:
+    # pylint: disable=too-many-statements,too-many-arguments,too-many-branches,too-many-locals
+
     """
     Get all users.
 
@@ -409,15 +414,15 @@ async def get_all_users(
         )
 
     with db_session as session:
-        roles = session.exec(query_role).all() if not (query_role is None) else None
-        scopes = session.exec(query_scope).all() if not (query_scope is None) else None
+        roles = session.exec(query_role).all() if query_role is not None else None
+        scopes = session.exec(query_scope).all() if query_scope is not None else None
         id_user = session.get(User, identified_user.id)
 
         if id_user is None:
             raise HTTPException(status_code=404, detail="User not found for auth token")
 
-        if (not (query_role is None) and roles is None) or (
-            not (query_scope is None) and scopes is None
+        if ((query_role is not None) and roles is None) or (
+            (query_scope is not None) and scopes is None
         ):
             raise HTTPException(
                 status_code=404, detail="Roles and Scopes not found for this enterprise"
@@ -449,17 +454,19 @@ async def get_all_users(
 
                 if result_scope is not None:
                     query = query.where(
-                        and_(User.role_id == result_role.id)
+                        or_(User.role_id == result_role.id)
                         # .in_(list(map(lambda x: x.id, result_role)))
                     )
 
                 if result_role is not None:
                     query = query.where(
-                        and_(User.scope_id == result_scope.id)
+                        or_(User.scope_id == result_scope.id)
                         # .in_(list(map(lambda x: x.id, result_scopes)))
                     )
 
         if usernames:
+            # pylint: disable=no-member
+
             query = query.where(
                 or_(
                     *[
@@ -470,6 +477,8 @@ async def get_all_users(
             )
 
         if emails:
+            # pylint: disable=no-member
+
             query = query.where(
                 or_(
                     *[
@@ -492,34 +501,30 @@ async def get_all_users(
             ),
         )
 
-        if authorized_user:
-            user_list: list[UserRead] = []
-            count = 0
-            for user in users:
-                print(f"User {count}", str(user.model_dump()))
-                count += 1
+        if authorized_user is None:
+            raise HTTPException(status_code=403, detail="Unauthorized user")
 
-                role = RoleRelation(**user.role.model_dump())
-                scope = ScopeRelation(**user.scope.model_dump())
-                enterprise = EnterpriseRelation(**user.enterprise.model_dump())
+        user_list: list[UserRead] = []
 
-                user_list.append(
-                    UserRead(
-                        **user.model_dump(),
-                        role=role,
-                        scope=scope,
-                        enterprise=enterprise,
-                    )
+        for user in users:
+            role = RoleRelation(**user.role.model_dump())
+            scope = ScopeRelation(**user.scope.model_dump())
+            enterprise = EnterpriseRelation(**user.enterprise.model_dump())
+
+            user_list.append(
+                UserRead(
+                    **user.model_dump(),
+                    role=role,
+                    scope=scope,
+                    enterprise=enterprise,
                 )
-
-            return UserListResponse(
-                status=200,
-                message="Users retrieved",
-                data=user_list,
             )
 
-        else:
-            raise HTTPException(status_code=403, detail="Unauthorized user")
+        return UserListResponse(
+            status=200,
+            message="Users retrieved",
+            data=user_list,
+        )
 
 
 @router.put("/{user_id}", response_model=UserResponse)
@@ -542,6 +547,8 @@ async def update_user(
     Returns:
         UserResponse: The response containing the updated user's information.
     """
+
+    # pylint: disable=too-many-statements,too-many-branches
 
     role: Role | None = None
     scope: Scope | None = None
@@ -644,7 +651,7 @@ async def update_user(
             enterprise=enterprise,
         )
 
-        if any([k != "password" for k, _ in user.model_dump().items()]):
+        if any(k != "password" for k, _ in user.model_dump().items()):
 
             await send_message(
                 UserUpdateEvent(
@@ -728,6 +735,6 @@ async def delete_user(
 
     return Response(
         status_code=200,
-        content=json.dumps(dict(status=200, message="User deleted")),
+        content=json.dumps({"status": 200, "message": "User deleted"}),
         media_type="application/json",
     )
