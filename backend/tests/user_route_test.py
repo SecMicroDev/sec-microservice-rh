@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import status
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.auth.data_hash import validate_hashed_data
 from app.models.enterprise import EnterpriseRelation
@@ -107,12 +107,14 @@ def test_create_user(
     assert response.status_code == status.HTTP_201_CREATED
     assert response.json()["status"] == 201
     assert response.json()["message"] == "User created"
-    user = response.json()["data"]
+    user: dict = response.json()["data"]
 
     # Validate database
     print(user)
+    assert user.get("id") is not None
+
     db = db_session
-    db_user_query = db.get(User, User.id)
+    db_user_query = db.get(User, user["id"])
     db_user = db_user_query
 
     assert db_user is not None
@@ -304,7 +306,10 @@ def test_update_user(
     """User should be updated"""
 
     test_client = test_client_authenticated_default
-    user_id = 1  # Replace with the desired user ID
+
+    user_id = db_session.exec(
+        select(User.id).where(User.username == "testuser")
+    ).first()
 
     # Update user information
     response = test_client.put(
@@ -338,7 +343,11 @@ def test_delete_user(
     """User should be deleted"""
 
     test_client = test_client_authenticated_default
-    user_id = 1  # Replace with the desired user ID
+
+    user_id = db_session.exec(
+        select(User.id).where(User.username == "testuser")
+    ).first()
+
     response = test_client.delete(f"users/{user_id}")
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["status"] == 200

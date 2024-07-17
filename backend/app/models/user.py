@@ -114,9 +114,7 @@ class User(BaseIDModel, BaseUser, table=True):
         default_factory=lambda: dt.now(timezone.utc),
     )
     role_id: Optional[int] = Field(default=None, foreign_key="role.id")
-    scope_id: Optional[int] = Field(
-        default=None, foreign_key="scope.id", nullable=False
-    )
+    scope_id: Optional[int] = Field(default=None, foreign_key="scope.id")
     role: Optional[Role] = Relationship(back_populates="users")
     scope: Optional[Scope] = Relationship(back_populates="users")
     enterprise: Optional[Enterprise] = Relationship(back_populates="users")

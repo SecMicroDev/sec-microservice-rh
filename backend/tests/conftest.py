@@ -97,13 +97,13 @@ def get_test_client_authenticated(user: UserRead):
 
 
 @pytest.fixture(scope="function")
-def test_client(db_session_fixture: Session):
+def test_client(db_session: Session):
     # pylint: disable=redefined-outer-name
     """Create a test client that uses the override_get_db fixture to return a session."""
 
     def override_get_session():
         # try:
-        yield db_session_fixture
+        yield db_session
         # finally:
         #     db_session.close()
 
@@ -118,9 +118,10 @@ def test_client(db_session_fixture: Session):
 
 
 @pytest.fixture(scope="function")
-def enterprise_role_scope(db_session_fixture: Session) -> dict[str, Any]:
+def enterprise_role_scope(db_session: Session) -> dict[str, Any]:
+    #pylint: disable=redefined-outer-name
 
-    session = db_session_fixture
+    session = db_session
 
     # Create default roles and scopes
     default_roles = DefaultRoleSchema.get_default_roles()
@@ -161,9 +162,7 @@ def enterprise_role_scope(db_session_fixture: Session) -> dict[str, Any]:
 
 
 @pytest.fixture(scope="function")
-def create_default_user(
-    db_session_fixture: Session, enterprise_role_scope: dict[str, Any]
-):
+def create_default_user(db_session: Session, enterprise_role_scope: dict[str, Any]):
     # pylint: disable=redefined-outer-name
 
     roles: list[Role] = enterprise_role_scope["roles"]
@@ -182,17 +181,17 @@ def create_default_user(
         scope_id=scope.id,
         enterprise_id=enterprise_role_scope["enterprise"].id,
     )
-    db_session_fixture.add(user)
-    db_session_fixture.commit()
+    db_session.add(user)
+    db_session.commit()
 
-    db_session_fixture.refresh(user)
+    db_session.refresh(user)
 
     return {"user": user, **enterprise_role_scope}
 
 
 @pytest.fixture(scope="function")
 def test_client_authenticated_default(
-    db_session_fixture: Session, create_default_user: dict[str, Any]
+    db_session: Session, create_default_user: dict[str, Any]
 ):
     # pylint: disable=redefined-outer-name
 
@@ -223,9 +222,9 @@ def test_client_authenticated_default(
 
     def override_get_session():
         # try:
-        yield db_session_fixture
+        yield db_session
         # finally:
-        #     db_session_fixture.close()
+        #     db_session.close()
 
     def override_authenticate_user(token: str = "") -> Any:
         # pylint: disable=unused-argument

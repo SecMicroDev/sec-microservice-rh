@@ -3,11 +3,13 @@ from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 from fastapi.testclient import TestClient
+from sqlmodel import Session, select
 
 from app.messages.client import AsyncSender
 from app.models.enterprise import BaseEnterprise, Enterprise, EnterpriseUpdate
 from app.models.user import (
     FirstUserCreate,
+    User,
     UserCreate,
     UserRead,
     UserUpdate,
@@ -15,14 +17,26 @@ from app.models.user import (
 )
 from app.router.utils import EnterpriseUpdateWithId, UserEvents, UserUpdateWithId
 
+from .conftest import engine
+
+
+def local_db_session():
+    """Create a new database session with a rollback at the end of the test."""
+
+    connection = engine.connect()
+    transaction = connection.begin()
+    session = Session(bind=connection, autocommit=False, autoflush=False)
+
+    return (connection, transaction, session)
+
 
 @patch.object(AsyncSender, "publish")
 def test_create_user(mock_publish: Mock, test_client_auth_default_with_broker):
     client: TestClient = test_client_auth_default_with_broker
     user = UserCreate(
-        username="testuser2",
-        password="testpassword2",
-        email="emailtest2@test.com.br",
+        username="testuser3",
+        password="testpassword3",
+        email="emailtest3@test.com.br",
         enterprise_id=1,
         role_id=1,
         scope_id=1,
@@ -31,6 +45,7 @@ def test_create_user(mock_publish: Mock, test_client_auth_default_with_broker):
     mock_publish.return_value = AsyncMock()
 
     response = client.post("/users/", json=user.model_dump())
+    print("Resp: ", str(response.json()))
     user = UserRead(**response.json()["data"])
     user_dict = json.loads(user.model_dump_json())
 
@@ -63,9 +78,9 @@ def test_create_user(mock_publish: Mock, test_client_auth_default_with_broker):
 def test_update_current_user(mock_publish: Mock, test_client_auth_default_with_broker):
     client: TestClient = test_client_auth_default_with_broker
     user = UserUpdateMe(
-        username="testuser2",
-        password="testpassword2",
-        email="emailtest2@test.com.br",
+        username="testuser4",
+        password="testpassword4",
+        email="emailtest4@test.com.br",
     )
 
     mock_publish.return_value = AsyncMock()
@@ -103,17 +118,28 @@ def test_update_current_user(mock_publish: Mock, test_client_auth_default_with_b
 @patch.object(AsyncSender, "publish")
 def test_update_user(mock_publish: Mock, test_client_auth_default_with_broker):
     client: TestClient = test_client_auth_default_with_broker
-    user_id = 1  # replace with a valid user id
+    conn, trans, db = local_db_session()
+    user_id = 0
+
+    user_id = db.exec(select(User.id).where(User.username == "testuser")).first()
+
+    assert user_id is not None and user_id > 0
+
     user = UserUpdate(
-        username="testuser2",
-        password="testpassword2",
-        email="emailtest2@test.com.br",
+        username="testuser3",
+        password="testpassword3",
+        email="emailtest3@test.com.br",
         role_id=2,
     )
 
     mock_publish.return_value = AsyncMock()
 
     response = client.put(f"/users/{user_id}", json=user.model_dump())
+
+    if db.is_active:
+        db.close()
+        trans.rollback()
+        conn.close()
 
     assert response.status_code == 200
 
@@ -146,11 +172,21 @@ def test_update_user(mock_publish: Mock, test_client_auth_default_with_broker):
 @patch.object(AsyncSender, "publish")
 def test_delete_user(mock_publish: Mock, test_client_auth_default_with_broker):
     client: TestClient = test_client_auth_default_with_broker
-    user_id = 1  # replace with a valid user id
+    conn, trans, db = local_db_session()
+    user_id = 0
+
+    user_id = db.exec(select(User.id).where(User.username == "testuser")).first()
+
+    assert user_id is not None and user_id > 0
 
     mock_publish.return_value = AsyncMock()
 
     response = client.delete(f"/users/{user_id}")
+
+    if db.is_active:
+        db.close()
+        trans.rollback()
+        conn.close()
 
     assert response.status_code == 200
 
