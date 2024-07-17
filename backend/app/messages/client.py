@@ -1,12 +1,15 @@
 from asyncio import AbstractEventLoop
 from datetime import datetime as dt, timedelta, timezone
+import json
 from json.decoder import JSONDecodeError
 from os import environ
 from typing import Any
-import aio_pika
-from aio_pika import ExchangeType, Message, DeliveryMode
+
+from aio_pika import DeliveryMode, ExchangeType, Message
+from aio_pika.abc import AbstractChannel, AbstractExchange, AbstractMessage
 import pika
-import json
+
+from app.messages.async_broker import AsyncBroker
 
 
 class SyncSender:
@@ -35,19 +38,26 @@ class SyncSender:
         self.connection.close()
 
 
-class AsyncSender:
+class AsyncSender(AsyncBroker):
     def __init__(self, queue_name):
         self.queue_name = queue_name
 
+    def default_exchange(self, channel: AbstractChannel):
+        return channel.declare_exchange(
+            environ.get("DEFAULT_EXCHANGE", "openferp"),
+            durable=bool(environ.get("EXCHANGE_DURABLE", "True")),
+            type=ExchangeType.TOPIC,
+        )
+
+    async def publish_to(
+        self, route: str, exchange: AbstractExchange, message: AbstractMessage
+    ):
+        await exchange.publish(routing_key=f"rh_event.{route}", message=message)
+        print(f"Published on Exchange {exchange.name}, {str(exchange)}")
+
     async def publish(self, message_body: str, loop: AbstractEventLoop):
         print("Connecting to broker...")
-        connection = await aio_pika.connect_robust(
-            host=environ.get("BROKER_HOST", "my-rabbit"),
-            username=environ.get("BROKER_USER", "guest"),
-            password=environ.get("BROKER_PASS", "guest"),
-            port=int(environ.get("BROKER_PORT", "5672")),
-            loop=loop,
-        )
+        connection = await self.default_connect_robust(loop)
 
         print("Returning channel...")
 
@@ -55,15 +65,20 @@ class AsyncSender:
         body: dict[str, Any] = {}
 
         try:
+
             body = json.loads(message_body)
-            body.update(dict(origin="rh"))
+            body.update({"origin": "rh"})
             body.update(
-                dict(
-                    start_date=dt.now(tz=timezone(timedelta(0), name="UTC")).isoformat()
-                )
+                {
+                    "start_date": dt.now(
+                        tz=timezone(timedelta(0), name="UTC")
+                    ).isoformat()
+                }
             )
+
             message_body = json.dumps(body)
-        except JSONDecodeError | KeyError:
+
+        except (JSONDecodeError, KeyError):
             print("Invalid JSON message")
             return connection
 
@@ -72,36 +87,10 @@ class AsyncSender:
             delivery_mode=DeliveryMode.PERSISTENT,
         )
 
-        exchange = await channel.declare_exchange(
-            environ.get("DEFAULT_EXCHANGE", "openferp"),
-            durable=bool(environ.get("EXCHANGE_DURABLE", "True")),
-            type=ExchangeType.TOPIC,
-        )
-
+        exchange = await self.default_exchange(channel)
         print("publishing to queue")
 
-        async def publish_to(route: str):
-            await exchange.publish(routing_key=f"rh_event.{route}", message=message)
-            print(f"Published on Exchange {exchange.name}, {exchange.__str__()}")
-
         for route in ["sells", "pt"]:
-            await publish_to(route)
+            await self.publish_to(route, exchange, message)
 
-        # print(" [*] Waiting for messages. To exit press CTRL+C")
-        # await asyncio.Future()  # Run forever
         return connection
-
-
-# def main():
-#     sender = PikaSender(queue_name='rh_event_queue')
-#     try:
-#         while True:
-#             message = input("Enter the message to send: ")
-#             threading.Thread(target=run_sender, args=(sender, message)).start()
-#     except KeyboardInterrupt:
-#         print("Exiting...")
-#     finally:
-#         sender.close_connection()
-
-# if __name__ == "__main__":
-#     main()
