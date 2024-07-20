@@ -119,7 +119,7 @@ def test_client(db_session: Session):
 
 @pytest.fixture(scope="function")
 def enterprise_role_scope(db_session: Session) -> dict[str, Any]:
-    #pylint: disable=redefined-outer-name
+    # pylint: disable=redefined-outer-name
 
     session = db_session
 

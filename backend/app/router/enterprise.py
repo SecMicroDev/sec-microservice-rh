@@ -1,3 +1,5 @@
+"""Routes to manage enterprise resources, workers and roles."""
+
 import json
 from typing import Any, Callable, Coroutine
 

@@ -1,3 +1,23 @@
+"""
+This module contains the AsyncListener class which is used to asynchronously 
+listen to a message queue.
+
+Class AsyncListener:
+    This class is used to asynchronously listen to a message queue. It inherits 
+    from AsyncBroker.
+
+    Attributes:
+    - queue_name: The name of the queue to which messages will be sent.
+    - message_processor: A callable that processes the messages.
+
+    Methods:
+    - callback: Processes a message using the message_processor.
+    - iterate_queue: Iterates over the messages in the queue and processes them using 
+      the message_processor.
+    - listen: Connects to the message broker, declares the exchange and queue, 
+      binds the queue to the exchange, and starts iterating over the queue.
+"""
+
 from os import environ
 from typing import Callable
 import aio_pika

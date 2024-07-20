@@ -1,3 +1,5 @@
+"""DTO classes for event messages."""
+
 from enum import Enum
 
 from sqlmodel import SQLModel

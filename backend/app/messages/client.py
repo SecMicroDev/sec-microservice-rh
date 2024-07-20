@@ -1,3 +1,34 @@
+"""
+This module contains two classes: SyncSender and AsyncSender,
+which are used for sending messages to a message broker.
+
+Class SyncSender:
+    This class is used for synchronous message sending. It connects 
+    to the message broker when instantiated and sends messages to a specified queue.
+
+    Attributes:
+    - queue_name: The name of the queue to which messages will be sent.
+    - connection: The connection to the message broker.
+    - channel: The channel on which messages will be sent.
+
+    Methods:
+    - send_message: Sends a message to the queue.
+    - close_connection: Closes the connection to the message broker.
+
+Class AsyncSender:
+    This class is used for asynchronous message sending. 
+    It inherits from AsyncBroker.
+
+    Attributes:
+    - queue_name: The name of the queue to which messages will be sent.
+
+    Methods:
+    - default_exchange: Declares the default exchange.
+    - publish_to: Publishes a message to a specified route on an exchange.
+    - publish: Connects to the message broker,
+      prepares the message, and publishes it to the specified routes.
+"""
+
 from asyncio import AbstractEventLoop
 from datetime import datetime as dt, timedelta, timezone
 import json

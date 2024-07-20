@@ -1,3 +1,5 @@
+"""Basic token model structure."""
+
 from sqlmodel import SQLModel
 
 

@@ -1,3 +1,26 @@
+"""
+This module contains the UpdateEvent class which is used to process and handle update events.
+
+Class UpdateEvent:
+    This class is used to process update events. It has methods to create an event from a message,
+    process a message, and update tables based on the event.
+
+    Attributes:
+    - event_id: The ID of the event.
+    - data: The data associated with the event.
+    - start_date: The start date of the event.
+    - origin: The origin of the event.
+
+    Methods:
+    - create_from_message: Creates an UpdateEvent instance from a message.
+    - process_message: Processes a message by creating an UpdateEvent and updating the table.
+    - update_table: Updates the table based on the event_id.
+    - update_enterprise: Updates the enterprise table based on the event data.
+    - role_search: Searches for a role in the database based on the event data.
+    - scope_search: Searches for a scope in the database based on the event data.
+    - update_user: Updates the user table based on the event data.
+"""
+
 import datetime
 import json
 from typing import Any

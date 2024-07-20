@@ -1,3 +1,8 @@
+"""
+Login route for the OPENFerp Enterprise access. It generates 
+a JWT token for the user to access the API.
+"""
+
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, status

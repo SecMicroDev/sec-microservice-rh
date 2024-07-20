@@ -1,3 +1,5 @@
+"""Base class for async broker connections."""
+
 from asyncio import AbstractEventLoop
 from os import environ
 

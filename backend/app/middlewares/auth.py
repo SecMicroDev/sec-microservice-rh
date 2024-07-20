@@ -1,3 +1,5 @@
+"""Authentication and authorization middleware for FastAPI application."""
+
 from typing import Annotated, Any
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer

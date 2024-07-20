@@ -1,3 +1,8 @@
+"""
+Enterprise models.
+The Enterprise represents a full organization that can have multiple users, roles and scopes.
+"""
+
 from typing import TYPE_CHECKING, Optional
 from sqlmodel import Field, Relationship, SQLModel
 
