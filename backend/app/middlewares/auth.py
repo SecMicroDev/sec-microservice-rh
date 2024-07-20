@@ -54,7 +54,7 @@ def authenticate_user(token: Annotated[str, Depends(oauth2_scheme)]) -> UserRead
 
 def authorize_user(
     user: UserRead = Depends(authenticate_user),
-    operation_scopes: list[str] = ["All"],
+    operation_scopes: list[str] | None = None,
     operation_hierarchy_order: int = 1,
     custom_checks: bool | None = None,
 ) -> UserRead:
@@ -70,6 +70,8 @@ def authorize_user(
         HTTPException: If the user does not have permission to access the resource.
 
     """
+    if operation_scopes is None:
+        operation_scopes = [DefaultScope.ALL.value]
 
     print("Hierarchies: ", user.role.hierarchy)
     print("Scopes: ", user.scope.name)
