@@ -1,4 +1,4 @@
-FROM python:3.11-alpine3.19
+FROM python:3.12-alpine3.20
 
 COPY ./backend/ /backend/
 
@@ -23,4 +23,4 @@ EXPOSE 80
 
 # ENTRYPOINT ["source", "/app/.venv/bin/activate"]
 
-CMD ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
+CMD ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--reload", "--lifespan", "on"]

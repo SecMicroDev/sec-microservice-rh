@@ -1,7 +1,8 @@
 """Module for database setup and utilities using SQLModel and SQLAlchemy."""
 
-from sqlmodel import create_engine, SQLModel
-from sqlalchemy.orm import sessionmaker
+import sqlalchemy as sa
+from sqlmodel import SQLModel, Session, create_engine
+
 from . import settings as st
 
 
@@ -9,9 +10,8 @@ SQLALCHEMY_DATABASE_URL = (
     f"postgresql://{st.DB_USER}:{st.DB_PASSWORD}@{st.DB_HOST}:5432/{st.DB_NAME}"
 )
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 
 def create_db():
@@ -31,8 +31,12 @@ def get_db():
         Session: a new database session
     """
 
-    session = SessionLocal()
+    session = Session(autocommit=False, autoflush=False, bind=engine)
     try:
         yield session
     finally:
-        session.close()
+        if session.is_active:
+            session.close()
+
+
+GUID_SERVER_DEFAULT_PSQL = sa.DefaultClause(sa.text("gen_random_uuid()"))
