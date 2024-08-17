@@ -37,10 +37,12 @@ from os import environ
 from typing import Any
 
 from aio_pika import DeliveryMode, ExchangeType, Message
+import aio_pika
 from aio_pika.abc import AbstractChannel, AbstractExchange, AbstractMessage
 import pika
 
 from app.messages.async_broker import AsyncBroker
+from app.messages.settings import BROKER_HOST, BROKER_PASS, BROKER_PORT, BROKER_USER
 
 
 class SyncSender:
@@ -48,11 +50,11 @@ class SyncSender:
         self.queue_name = queue_name
         self.connection = pika.BlockingConnection(
             pika.ConnectionParameters(
-                host=environ.get("BROKER_HOST", "my-rabbit"),
-                port=int(environ.get("BROKER_PORT", "5672")),
+                host=BROKER_HOST,
+                port=BROKER_PORT,
                 credentials=pika.PlainCredentials(
-                    username=environ.get("BROKER_USER", "guest"),
-                    password=environ.get("BROKER_PASS", "guest"),
+                    username=BROKER_USER,
+                    password=BROKER_PASS
                 ),
             )
         )
@@ -88,40 +90,45 @@ class AsyncSender(AsyncBroker):
 
     async def publish(self, message_body: str, loop: AbstractEventLoop):
         print("Connecting to broker...")
-        connection = await self.default_connect_robust(loop)
-
-        print("Returning channel...")
-
-        channel = await connection.channel()
-        body: dict[str, Any] = {}
-
         try:
+            connection = await self.default_connect_robust(loop)
 
-            body = json.loads(message_body)
-            body.update({"origin": "rh"})
-            body.update(
-                {
-                    "start_date": dt.now(
-                        tz=timezone(timedelta(0), name="UTC")
-                    ).isoformat()
-                }
+            print("Returning channel...")
+
+            channel = await connection.channel()
+            body: dict[str, Any] = {}
+
+            try:
+
+                body = json.loads(message_body)
+                body.update({"origin": "rh"})
+                body.update(
+                    {
+                        "start_date": dt.now(
+                            tz=timezone(timedelta(0), name="UTC")
+                        ).isoformat()
+                    }
+                )
+
+                message_body = json.dumps(body)
+
+            except (JSONDecodeError, KeyError):
+                print("Invalid JSON message")
+                return connection
+
+            message = Message(
+                message_body.encode("ascii"),
+                delivery_mode=DeliveryMode.PERSISTENT,
             )
 
-            message_body = json.dumps(body)
+            exchange = await self.default_exchange(channel)
+            print("publishing to queue")
 
-        except (JSONDecodeError, KeyError):
-            print("Invalid JSON message")
+            for route in ["sells", "pt"]:
+                await self.publish_to(route, exchange, message)
+
             return connection
-
-        message = Message(
-            message_body.encode("ascii"),
-            delivery_mode=DeliveryMode.PERSISTENT,
-        )
-
-        exchange = await self.default_exchange(channel)
-        print("publishing to queue")
-
-        for route in ["sells", "pt"]:
-            await self.publish_to(route, exchange, message)
-
-        return connection
+        except aio_pika.exceptions.AMQPConnectionError as e:
+            print(f"Failed to connect to broker: ")
+            print(f"Error: {e}")
+            return None
