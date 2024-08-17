@@ -20,6 +20,7 @@ Class AsyncListener:
 
 from os import environ
 from typing import Callable
+
 import aio_pika
 
 from app.messages.async_broker import AsyncBroker
@@ -41,16 +42,21 @@ class AsyncListener(AsyncBroker):
                     self.message_processor(message.body.decode())
 
     async def listen(self, loop):
-        connection = await self.default_connect_robust(loop)
-        channel = await connection.channel()
-        exchange = await channel.declare_exchange(
-            environ.get("DEFAULT_EXCHANGE", "openferp"),
-            type=aio_pika.ExchangeType.TOPIC,
-            durable=True,
-        )
+        try:
+            connection = await self.default_connect_robust(loop)
+            channel = await connection.channel()
+            exchange = await channel.declare_exchange(
+                environ.get("DEFAULT_EXCHANGE", "openferp"),
+                type=aio_pika.ExchangeType.TOPIC,
+                durable=True,
+            )
 
-        queue = await channel.declare_queue("rhevents/rh", durable=True)
-        await queue.bind(exchange, routing_key=self.queue_name)
-        await self.iterate_queue(queue)
+            queue = await channel.declare_queue("rhevents/rh", durable=True)
+            await queue.bind(exchange, routing_key=self.queue_name)
+            await self.iterate_queue(queue)
 
-        return connection
+            return connection
+        except aio_pika.exceptions.AMQPError as e:
+            print(f"Failed to connect to broker: ")
+            print(f"Error: {e}")
+            return None

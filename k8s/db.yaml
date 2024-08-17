@@ -25,24 +25,24 @@ spec:
           volumeMounts:
             - name: postgres-volume-mount-rh
               mountPath: /var/lib/postgresql/data
-          readinessProbe:
-            exec:
-              command:
-                - bash
-                - "-c"
-                - |
-                  pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
-            initialDelaySeconds: 15
-            timeoutSeconds: 20
-          livenessProbe:
-            exec:
-              command:
-                - bash
-                - "-c"
-                - |
-                  pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
-            initialDelaySeconds: 45
-            timeoutSeconds: 20
+          # readinessProbe:
+          #   exec:
+          #     command:
+          #       - bash
+          #       - "-c"
+          #       - |
+          #         pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+          #   initialDelaySeconds: 15
+          #   timeoutSeconds: 20
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - bash
+          #       - "-c"
+          #       - |
+          #         pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+          #   initialDelaySeconds: 45
+          #   timeoutSeconds: 20
 
       volumes:
         - name: postgres-volume-mount-rh
@@ -55,7 +55,7 @@ metadata:
   name: postgres-service-rh-dev
   namespace: tcc
 spec:
-  clusterIP: 10.96.254.20
+  # clusterIP: 10.96.254.20
   type: ClusterIP
   selector:
     app: postgres-container-rh-dev
