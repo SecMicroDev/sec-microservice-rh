@@ -75,7 +75,7 @@ def scope_relation_from_enterprise(enterprise: Enterprise) -> list[ScopeRelation
 def get_filtered_roles(enterprise: Enterprise) -> Role | None:
     filtered_roles = list(
         filter(
-            lambda x: x.name == DefaultRole.COLLABORATOR.value,
+            lambda x: x.name == DefaultRole.OWNER.value,
             (enterprise.roles if enterprise.roles is not None else []),
         )
     )
