@@ -147,9 +147,10 @@ async def create_user(
                 passwd = userschema.pop("password")
                 userschema["created_at"] = datetime.now()
                 db_user = User(
-                    **userschema, 
+                    **userschema,
                     enterprise_id=identified_user.enterprise_id,
-                    hashed_password=get_hashed_data(passwd))
+                    hashed_password=get_hashed_data(passwd),
+                )
                 session.add(db_user)
 
                 session.commit()
@@ -606,12 +607,16 @@ async def update_user(
         authorize_user(
             user=identified_user,
             operation_scopes=[db_user.scope.name],
-            operation_hierarchy_order=min(
-                db_user.role.hierarchy, role.hierarchy if role else int(2**30 - 1)
+            operation_hierarchy_order=max(
+                DefaultRole.get_default_hierarchy(DefaultRole.MANAGER.value),
+                db_user.role.hierarchy
             ),
             custom_checks=(
-                db_user.scope.name == identified_user.scope.name
-                and (scope.name == identified_user.scope.name if scope else True)
+                identified_user.scope.name == DefaultScope.ALL.value
+                or (
+                    db_user.scope.name == identified_user.scope.name
+                    or (scope.name == identified_user.scope.name if scope else False)
+                )
             ),
         )
 
