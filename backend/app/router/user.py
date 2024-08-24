@@ -146,7 +146,10 @@ async def create_user(
                 userschema = user.model_dump()
                 passwd = userschema.pop("password")
                 userschema["created_at"] = datetime.now()
-                db_user = User(**userschema, hashed_password=get_hashed_data(passwd))
+                db_user = User(
+                    **userschema, 
+                    enterprise_id=identified_user.enterprise_id,
+                    hashed_password=get_hashed_data(passwd))
                 session.add(db_user)
 
                 session.commit()
