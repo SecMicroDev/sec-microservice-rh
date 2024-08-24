@@ -581,7 +581,7 @@ async def update_user(
                 raise HTTPException(status_code=404, detail="Scope not found")
         elif user.scope_name:
             scope = session.exec(
-                BaseScope.get_roles_by_names(
+                BaseScope.get_scopes_by_names(
                     identified_user.enterprise_id, [user.scope_name]
                 )
             ).first()
